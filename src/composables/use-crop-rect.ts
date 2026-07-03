@@ -26,6 +26,33 @@ export function clampRect(rect: NormRect): NormRect {
   return { x, y, width, height };
 }
 
+// resize handles keep the opposite edge fixed: the moved edge is clamped to
+// [0,1] and against the fixed edge's MIN_CROP margin, never the fixed edge itself
+export function applyHandle(handle: HandleId | 'move', start: NormRect, dx: number, dy: number): NormRect {
+  if (handle === 'move') {
+    return clampRect({ x: start.x + dx, y: start.y + dy, width: start.width, height: start.height });
+  }
+  const startRight = start.x + start.width;
+  const startBottom = start.y + start.height;
+  let left = start.x;
+  let right = startRight;
+  let top = start.y;
+  let bottom = startBottom;
+  if (handle.includes('w')) {
+    left = Math.min(right - MIN_CROP, Math.max(0, start.x + dx));
+  }
+  if (handle.includes('e')) {
+    right = Math.min(1, Math.max(left + MIN_CROP, start.x + start.width + dx));
+  }
+  if (handle.includes('n')) {
+    top = Math.min(bottom - MIN_CROP, Math.max(0, start.y + dy));
+  }
+  if (handle.includes('s')) {
+    bottom = Math.min(1, Math.max(top + MIN_CROP, start.y + start.height + dy));
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
 interface DragState {
   handle: HandleId | 'move';
   startX: number;
@@ -64,34 +91,12 @@ export default function useCropRect(
     return { dx, dy };
   }
 
-  function applyHandle(handle: HandleId | 'move', start: NormRect, dx: number, dy: number): NormRect {
-    if (handle === 'move') {
-      return { x: start.x + dx, y: start.y + dy, width: start.width, height: start.height };
-    }
-    let { x, y, width, height } = start;
-    if (handle.includes('w')) {
-      x = start.x + dx;
-      width = start.width - dx;
-    }
-    if (handle.includes('e')) {
-      width = start.width + dx;
-    }
-    if (handle.includes('n')) {
-      y = start.y + dy;
-      height = start.height - dy;
-    }
-    if (handle.includes('s')) {
-      height = start.height + dy;
-    }
-    return { x, y, width, height };
-  }
-
   function onPointerMove(e: PointerEvent): void {
     if (!drag) {
       return;
     }
     const { dx, dy } = toNormDelta(e);
-    draft.value = clampRect(applyHandle(drag.handle, drag.startRect, dx, dy));
+    draft.value = applyHandle(drag.handle, drag.startRect, dx, dy);
   }
 
   function onPointerUp(): void {

@@ -4,7 +4,7 @@ import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 // stores
 import useEditorStore from '@/stores/editor';
 // composables
-import useCropRect from '@/composables/use-crop-rect';
+import useCropRect, { clampRect } from '@/composables/use-crop-rect';
 // models
 import type { HandleId, NormRect } from '@/composables/use-crop-rect';
 
@@ -23,12 +23,21 @@ const emit = defineEmits<Emits>();
 
 // constants
 const HANDLES: HandleId[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const NUDGE_STEP = 0.01;
+const NUDGE_STEP_LARGE = 0.1;
+const ARROW_DELTAS: Record<string, { dx: number; dy: number }> = {
+  ArrowUp: { dx: 0, dy: -1 },
+  ArrowDown: { dx: 0, dy: 1 },
+  ArrowLeft: { dx: -1, dy: 0 },
+  ArrowRight: { dx: 1, dy: 0 },
+};
 
 // stores
 const store = useEditorStore();
 
 // template refs
 const rootRef = useTemplateRef<HTMLDivElement>('root');
+const frameRef = useTemplateRef<HTMLDivElement>('frame');
 
 // state
 // mirrors the canvas's letterboxed rendered rect, measured directly so the
@@ -92,6 +101,25 @@ function onCancel(): void {
   emit('cancel');
 }
 
+function onFrameKeydown(e: KeyboardEvent): void {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    onCancel();
+    return;
+  }
+  const delta = ARROW_DELTAS[e.key];
+  if (!delta) {
+    return;
+  }
+  e.preventDefault();
+  const step = e.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+  draft.value = clampRect({
+    ...draft.value,
+    x: draft.value.x + delta.dx * step,
+    y: draft.value.y + delta.dy * step,
+  });
+}
+
 // lifecycle
 let resizeObserver: ResizeObserver | null = null;
 
@@ -103,6 +131,7 @@ onMounted(() => {
     resizeObserver.observe(canvas);
   }
   window.addEventListener('resize', measure);
+  frameRef.value?.focus();
 });
 
 onBeforeUnmount(() => {
@@ -135,6 +164,7 @@ onBeforeUnmount(() => {
       />
     </svg>
     <div
+      ref="frame"
       class="crop-overlay__frame"
       :style="{
         left: pct(draft.x),
@@ -142,7 +172,11 @@ onBeforeUnmount(() => {
         width: pct(draft.width),
         height: pct(draft.height),
       }"
+      tabindex="0"
+      role="group"
+      aria-label="Crop region, use arrow keys to move"
       @pointerdown="onBodyPointerDown"
+      @keydown="onFrameKeydown"
     >
       <button
         v-for="handle in HANDLES"
