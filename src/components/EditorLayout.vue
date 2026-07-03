@@ -2,10 +2,11 @@
 // utils
 import { useTemplateRef } from 'vue';
 // components
-import ActionsPanel from '@/components/ActionsPanel.vue';
 import AdjustmentsPanel from '@/components/AdjustmentsPanel.vue';
 import CropOverlay from '@/components/CropOverlay.vue';
+import CropPanel from '@/components/CropPanel.vue';
 import EditorCanvas from '@/components/EditorCanvas.vue';
+import EditorToolbar from '@/components/EditorToolbar.vue';
 import FilterPanel from '@/components/FilterPanel.vue';
 // stores
 import useEditorStore from '@/stores/editor';
@@ -35,46 +36,26 @@ function onCancel(): void {
 
 <template>
   <div class="editor-layout">
-    <div class="editor-layout__stage">
-      <EditorCanvas ref="editorCanvas">
-        <template #overlay>
-          <CropOverlay
-            v-if="store.cropEditing"
-            :get-canvas="getCanvas"
-            @apply="onApply"
-            @cancel="onCancel"
-          />
-        </template>
-      </EditorCanvas>
+    <EditorToolbar />
+    <div class="editor-layout__body">
+      <main class="editor-layout__stage">
+        <EditorCanvas ref="editorCanvas">
+          <template #overlay>
+            <CropOverlay
+              v-if="store.cropEditing"
+              :get-canvas="getCanvas"
+              @apply="onApply"
+              @cancel="onCancel"
+            />
+          </template>
+        </EditorCanvas>
+      </main>
+      <aside class="editor-layout__panels">
+        <AdjustmentsPanel />
+        <FilterPanel />
+        <CropPanel />
+      </aside>
     </div>
-    <aside class="editor-layout__panels">
-      <AdjustmentsPanel />
-      <FilterPanel />
-      <v-card class="editor-layout__crop-card">
-        <v-card-title class="editor-layout__crop-title">
-          Crop
-        </v-card-title>
-        <v-card-text class="editor-layout__crop-actions">
-          <v-btn
-            variant="tonal"
-            block
-            :disabled="!store.hasImage || store.cropEditing"
-            @click="store.cropEditing = true"
-          >
-            Crop
-          </v-btn>
-          <v-btn
-            v-if="store.crop"
-            variant="tonal"
-            block
-            @click="store.clearCrop()"
-          >
-            Remove crop
-          </v-btn>
-        </v-card-text>
-      </v-card>
-      <ActionsPanel />
-    </aside>
   </div>
 </template>
 
@@ -82,17 +63,24 @@ function onCancel(): void {
 .editor-layout {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  height: 100vh;
 
-  @media (min-width: 60rem) {
-    flex-direction: row;
+  &__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    // lets the panels scroll internally instead of growing the page
+    min-height: 0;
+
+    @media (min-width: 60rem) {
+      flex-direction: row;
+    }
   }
 
   &__stage {
     flex: 1 1 auto;
-    min-height: 20rem;
     min-width: 0;
+    min-height: 20rem;
   }
 
   &__panels {
@@ -102,20 +90,11 @@ function onCancel(): void {
     gap: 1rem;
     width: 100%;
     padding: 1rem;
+    overflow-y: auto;
 
     @media (min-width: 60rem) {
       width: 20rem;
     }
-  }
-
-  &__crop-title {
-    font-size: 1rem;
-  }
-
-  &__crop-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
   }
 }
 </style>

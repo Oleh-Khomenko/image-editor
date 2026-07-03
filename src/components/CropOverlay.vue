@@ -63,7 +63,6 @@ function measure(): void {
   };
 }
 
-// percentage strings so the SVG scales with the measured box (0..1 -> 0..100%)
 function pct(value: number): string {
   return `${value * 100}%`;
 }

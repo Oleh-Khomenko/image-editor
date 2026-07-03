@@ -64,10 +64,14 @@ function handleDrop(event: DragEvent): void {
         <v-btn
           color="primary"
           block
+          prepend-icon="mdi-image-plus"
           @click="openFileDialog"
         >
           Choose image
         </v-btn>
+        <p class="upload-card__formats">
+          PNG, JPEG or WebP
+        </p>
         <input
           ref="fileInputRef"
           type="file"
@@ -75,14 +79,6 @@ function handleDrop(event: DragEvent): void {
           class="upload-card__input"
           @change="handleFileInput"
         >
-        <v-alert
-          v-if="store.error"
-          type="error"
-          class="upload-card__alert"
-          density="compact"
-        >
-          {{ store.error }}
-        </v-alert>
       </v-card-text>
     </v-card>
   </div>
@@ -115,8 +111,11 @@ function handleDrop(event: DragEvent): void {
     display: none;
   }
 
-  &__alert {
-    margin-top: 1rem;
+  &__formats {
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+    text-align: center;
+    opacity: 0.6;
   }
 }
 </style>

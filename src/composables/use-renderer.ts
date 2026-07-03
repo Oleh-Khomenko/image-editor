@@ -21,7 +21,6 @@ export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): v
     if (!canvas || !bitmap) {
       return;
     }
-    // one renderer serves every source; it is bound to the canvas, not the image
     if (!renderer) {
       renderer = new CanvasRenderer(canvas);
     }

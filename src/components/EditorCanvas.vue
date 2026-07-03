@@ -10,7 +10,6 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
 useRenderer(canvasRef);
 
 // expose
-// CropOverlay measures this canvas to position itself over the letterboxed image
 defineExpose({ getCanvas: (): HTMLCanvasElement | null => canvasRef.value });
 </script>
 
