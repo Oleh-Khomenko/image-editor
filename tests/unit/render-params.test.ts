@@ -1,34 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { toCssFilter, toRenderParams } from '@/core/render/params';
-import { FRAGMENT_SRC } from '@/core/render/shaders';
-import type { EditOperation } from '@/core/operations/types';
+import { toCssFilter } from '@/core/render/params';
 
-describe('render params', () => {
-  it('maps slider values to factors', () => {
-    const ops: EditOperation[] = [
-      { type: 'adjust', brightness: 0, contrast: 100, saturation: -100 },
-    ];
-    const p = toRenderParams(ops);
-    expect(p.brightness).toBe(1);
-    expect(p.contrast).toBe(2);
-    expect(p.saturation).toBe(0);
-  });
-
-  it('maps filter name to enum', () => {
-    expect(toRenderParams([]).filter).toBe(0);
-    expect(toRenderParams([{ type: 'filter', name: 'grayscale' }]).filter).toBe(1);
-    expect(toRenderParams([{ type: 'filter', name: 'sepia' }]).filter).toBe(2);
-  });
-
-  it('builds css filter string for the fallback', () => {
+describe('toCssFilter', () => {
+  it('returns null when nothing is applied', () => {
     expect(toCssFilter([])).toBeNull();
-    expect(toCssFilter([{ type: 'filter', name: 'grayscale' }])).toContain('grayscale(1)');
-    const css = toCssFilter([{ type: 'adjust', brightness: 100, contrast: 0, saturation: 0 }]);
-    expect(css).toContain('brightness(2)');
+    expect(toCssFilter([{ type: 'adjust', brightness: 0, contrast: 0, saturation: 0 }])).toBeNull();
   });
 
-  it('exposes a fragment shader source', () => {
-    expect(typeof FRAGMENT_SRC).toBe('string');
-    expect(FRAGMENT_SRC).toContain('gl_FragColor');
+  it('maps slider values to filter factors', () => {
+    const css = toCssFilter([{ type: 'adjust', brightness: 100, contrast: -100, saturation: 0 }]);
+    expect(css).toContain('brightness(2)');
+    expect(css).toContain('contrast(0)');
+    expect(css).not.toContain('saturate');
+  });
+
+  it('appends the named filter', () => {
+    expect(toCssFilter([{ type: 'filter', name: 'grayscale' }])).toBe('grayscale(1)');
+    expect(toCssFilter([{ type: 'filter', name: 'sepia' }])).toBe('sepia(1)');
   });
 });

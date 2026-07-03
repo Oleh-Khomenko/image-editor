@@ -1,7 +1,6 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import type { Ref } from 'vue';
-import { createRenderer } from '@/core/render/select-renderer';
-import type { Renderer } from '@/core/render/renderer';
+import { CanvasRenderer } from '@/core/render/canvas-renderer';
 import useEditorStore from '@/stores/editor';
 
 export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): void {
@@ -9,8 +8,7 @@ export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): v
   const store = useEditorStore();
 
   // renderer state
-  let renderer: Renderer | null = null;
-  let renderedBitmap: ImageBitmap | null = null;
+  let renderer: CanvasRenderer | null = null;
   let frame = 0;
 
   // helpers
@@ -21,10 +19,10 @@ export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): v
     if (!canvas || !bitmap) {
       return;
     }
-    if (!renderer || bitmap !== renderedBitmap) {
-      renderer?.dispose();
-      renderer = createRenderer(canvas, { width: bitmap.width, height: bitmap.height });
-      renderedBitmap = bitmap;
+    // the renderer is bound to the canvas element, not the image, so one
+    // instance serves every source for this component's lifetime
+    if (!renderer) {
+      renderer = new CanvasRenderer(canvas);
     }
     renderer.render(bitmap, store.effectiveOperations);
   }
@@ -54,7 +52,5 @@ export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): v
       cancelAnimationFrame(frame);
       frame = 0;
     }
-    renderer?.dispose();
-    renderer = null;
   });
 }

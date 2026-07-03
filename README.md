@@ -42,24 +42,16 @@ operations; the Vue components under `src/components` are the UI on top.
 
 ## Rendering
 
-The preview and the exported file go through the same code, so what you see is
-what you get. A single WebGL fragment shader does the adjustments and filters;
-crop is a UV rectangle. The source image is uploaded to a texture once, and
-moving a slider only changes a uniform, which keeps dragging smooth on large
-images. Export renders at the image's full resolution into the same pipeline and
-reads the pixels back into a PNG/JPEG/WebP blob, preserving the original format.
+Both the preview and the export run through one `CanvasRenderer`
+(`src/core/render/canvas-renderer.ts`): a 2D canvas with `ctx.filter` for the
+adjustments and filters, and a `drawImage` sub-rectangle for the crop. Because
+preview and export share that one path, what you see is what you get.
 
-WebGL adds complexity, so here is where it can break and what handles each case:
-
-- No WebGL available: fall back to a Canvas 2D renderer using CSS filter strings.
-- Image larger than `MAX_TEXTURE_SIZE`: same fall back, per image.
-- Lost GL context: the renderer re-links the program and re-uploads the texture
-  on restore.
-- Alpha and orientation: unpack flags are set so the read-back matches the
-  preview instead of coming out premultiplied or upside down.
-
-Both renderers implement one `Renderer` interface and are chosen at runtime, so
-the rest of the app does not care which one is active.
+The adjustments and filters map straight onto CSS filter functions
+(`brightness`, `contrast`, `saturate`, `grayscale`, `sepia`), so a shader engine
+would not buy anything here. The preview renders at display resolution to keep
+slider dragging cheap; the export renders the same operations at the image's full
+resolution and writes a PNG/JPEG/WebP blob, preserving the original format.
 
 ## JSON export and replay
 

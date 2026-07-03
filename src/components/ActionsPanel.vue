@@ -2,7 +2,7 @@
 import { storeToRefs } from 'pinia';
 import { useTemplateRef } from 'vue';
 import useEditorStore from '@/stores/editor';
-import { createRenderer } from '@/core/render/select-renderer';
+import { CanvasRenderer } from '@/core/render/canvas-renderer';
 import { download, downloadText, exportFilename } from '@/core/util/download';
 
 // stores
@@ -46,13 +46,9 @@ async function onExportImage(): Promise<void> {
     return;
   }
   const canvas = document.createElement('canvas');
-  const renderer = createRenderer(canvas, { width: source.width, height: source.height });
-  try {
-    const blob = await renderer.toBlob(sourceBitmap, store.operations, source.mimeType);
-    download(blob, exportFilename(source.name, '-edited', extFromMime(source.mimeType)));
-  } finally {
-    renderer.dispose();
-  }
+  const renderer = new CanvasRenderer(canvas);
+  const blob = await renderer.toBlob(sourceBitmap, store.operations, source.mimeType);
+  download(blob, exportFilename(source.name, '-edited', extFromMime(source.mimeType)));
 }
 
 async function onExportJson(embed: boolean): Promise<void> {

@@ -1,12 +1,26 @@
-import type { EditOperation } from '@/core/operations/types';
+import type { CropOp, EditOperation } from '@/core/operations/types';
 import { getCrop } from '@/core/operations/model';
 import { toCssFilter } from '@/core/render/params';
-import { cropOutputSize } from '@/core/render/webgl-renderer';
-import type { Renderer } from '@/core/render/renderer';
 
-// 2D canvas fallback for environments without WebGL. Slower, but supports the
-// same crop/adjust/filter pipeline via ctx.filter + drawImage sub-rects.
-export class CanvasRenderer implements Renderer {
+// Preview renders at display resolution; rendering the full native size every
+// slider tick is wasted work on the CPU 2D pipeline. Export always renders full.
+const PREVIEW_MAX_SIZE = 2000;
+
+export function cropOutputSize(
+  sourceW: number,
+  sourceH: number,
+  crop: CropOp | null,
+): { width: number; height: number } {
+  if (!crop) {
+    return { width: Math.round(sourceW), height: Math.round(sourceH) };
+  }
+  return {
+    width: Math.max(1, Math.round(sourceW * crop.width)),
+    height: Math.max(1, Math.round(sourceH * crop.height)),
+  };
+}
+
+export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
 
@@ -20,13 +34,11 @@ export class CanvasRenderer implements Renderer {
   }
 
   render(source: ImageBitmap, ops: EditOperation[]): void {
-    this.draw(source, ops);
+    this.draw(source, ops, PREVIEW_MAX_SIZE);
   }
 
   async toBlob(source: ImageBitmap, ops: EditOperation[], mime: string): Promise<Blob> {
-    // Reuses the instance canvas; draw() always sizes it to the full
-    // cropOutputSize, so the output is never a display-downscaled size.
-    this.draw(source, ops);
+    this.draw(source, ops, Infinity);
     const canvas = this.canvas;
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
@@ -39,18 +51,19 @@ export class CanvasRenderer implements Renderer {
     });
   }
 
-  dispose(): void {
-    // Nothing to release: the 2D context holds no GPU resources.
-  }
-
-  private draw(source: ImageBitmap, ops: EditOperation[]): void {
+  // preview and export share this path, so what you see matches what you export;
+  // maxSize only bounds the backing-store size (Infinity = full resolution)
+  private draw(source: ImageBitmap, ops: EditOperation[], maxSize: number): void {
     const crop = getCrop(ops);
     const sx = crop ? crop.x * source.width : 0;
     const sy = crop ? crop.y * source.height : 0;
     const sw = crop ? crop.width * source.width : source.width;
     const sh = crop ? crop.height * source.height : source.height;
 
-    const { width, height } = cropOutputSize(source.width, source.height, crop);
+    const native = cropOutputSize(source.width, source.height, crop);
+    const scale = Math.min(1, maxSize / Math.max(native.width, native.height));
+    const width = Math.max(1, Math.round(native.width * scale));
+    const height = Math.max(1, Math.round(native.height * scale));
     this.canvas.width = width;
     this.canvas.height = height;
 
