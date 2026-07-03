@@ -10,8 +10,6 @@ import EditorToolbar from '@/components/EditorToolbar.vue';
 import FilterPanel from '@/components/FilterPanel.vue';
 // stores
 import useEditorStore from '@/stores/editor';
-// models
-import type { NormRect } from '@/composables/use-crop-rect';
 
 // stores
 const store = useEditorStore();
@@ -22,15 +20,6 @@ const editorCanvasRef = useTemplateRef<InstanceType<typeof EditorCanvas>>('edito
 // helpers
 function getCanvas(): HTMLCanvasElement | null {
   return editorCanvasRef.value?.getCanvas() ?? null;
-}
-
-function onApply(rect: NormRect): void {
-  store.setCrop(rect);
-  store.stopCropEditing();
-}
-
-function onCancel(): void {
-  store.stopCropEditing();
 }
 </script>
 
@@ -44,8 +33,6 @@ function onCancel(): void {
             <CropOverlay
               v-if="store.cropEditing"
               :get-canvas="getCanvas"
-              @apply="onApply"
-              @cancel="onCancel"
             />
           </template>
         </EditorCanvas>

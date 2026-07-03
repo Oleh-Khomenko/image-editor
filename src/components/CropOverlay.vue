@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // utils
 import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
+import { storeToRefs } from 'pinia';
 // stores
 import useEditorStore from '@/stores/editor';
 // composables
 import useCropRect, { clampRect } from '@/composables/use-crop-rect';
 // models
-import type { HandleId, NormRect } from '@/composables/use-crop-rect';
+import type { HandleId } from '@/composables/use-crop-rect';
 
 // props
 interface Props {
@@ -14,15 +15,9 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-// emits
-interface Emits {
-  (e: 'apply', rect: NormRect): void;
-  (e: 'cancel'): void;
-}
-const emit = defineEmits<Emits>();
-
 // constants
 const HANDLES: HandleId[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const GRID_LINES = [33.33, 66.66];
 const NUDGE_STEP = 0.01;
 const NUDGE_STEP_LARGE = 0.1;
 const ARROW_DELTAS: Record<string, { dx: number; dy: number }> = {
@@ -34,6 +29,7 @@ const ARROW_DELTAS: Record<string, { dx: number; dy: number }> = {
 
 // stores
 const store = useEditorStore();
+const { cropDraft } = storeToRefs(store);
 
 // template refs
 const rootRef = useTemplateRef<HTMLDivElement>('root');
@@ -50,9 +46,10 @@ const box = ref<{ left: number; top: number; width: number; height: number }>({
 });
 
 // composables
-const { draft, onHandlePointerDown, onBodyPointerDown } = useCropRect(
+const { onHandlePointerDown, onBodyPointerDown } = useCropRect(
   () => rootRef.value,
-  () => store.crop,
+  cropDraft,
+  () => store.cropAspect,
 );
 
 // helpers
@@ -93,18 +90,15 @@ function handleStyle(handle: HandleId): Record<string, string> {
   return { left: pct(x), top: pct(y) };
 }
 
-function onApply(): void {
-  emit('apply', { ...draft.value });
-}
-
-function onCancel(): void {
-  emit('cancel');
-}
-
 function onFrameKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
     e.preventDefault();
-    onCancel();
+    store.stopCropEditing();
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    store.applyCrop();
     return;
   }
   const delta = ARROW_DELTAS[e.key];
@@ -113,11 +107,13 @@ function onFrameKeydown(e: KeyboardEvent): void {
   }
   e.preventDefault();
   const step = e.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
-  draft.value = clampRect({
-    ...draft.value,
-    x: draft.value.x + delta.dx * step,
-    y: draft.value.y + delta.dy * step,
-  });
+  store.setCropDraft(
+    clampRect({
+      ...store.cropDraft,
+      x: store.cropDraft.x + delta.dx * step,
+      y: store.cropDraft.y + delta.dy * step,
+    }),
+  );
 }
 
 // lifecycle
@@ -160,17 +156,17 @@ onBeforeUnmount(() => {
       <path
         class="crop-overlay__mask"
         fill-rule="evenodd"
-        :d="`M0,0 H100 V100 H0 Z M${draft.x * 100},${draft.y * 100} h${draft.width * 100} v${draft.height * 100} h${-draft.width * 100} Z`"
+        :d="`M0,0 H100 V100 H0 Z M${cropDraft.x * 100},${cropDraft.y * 100} h${cropDraft.width * 100} v${cropDraft.height * 100} h${-cropDraft.width * 100} Z`"
       />
     </svg>
     <div
       ref="frame"
       class="crop-overlay__frame"
       :style="{
-        left: pct(draft.x),
-        top: pct(draft.y),
-        width: pct(draft.width),
-        height: pct(draft.height),
+        left: pct(cropDraft.x),
+        top: pct(cropDraft.y),
+        width: pct(cropDraft.width),
+        height: pct(cropDraft.height),
       }"
       tabindex="0"
       role="group"
@@ -178,6 +174,29 @@ onBeforeUnmount(() => {
       @pointerdown="onBodyPointerDown"
       @keydown="onFrameKeydown"
     >
+      <div
+        class="crop-overlay__grid"
+        aria-hidden="true"
+      >
+        <span
+          v-for="pos in GRID_LINES"
+          :key="`v-${pos}`"
+          class="crop-overlay__grid-line crop-overlay__grid-line--v"
+          :style="{ left: `${pos}%` }"
+        />
+        <span
+          v-for="pos in GRID_LINES"
+          :key="`h-${pos}`"
+          class="crop-overlay__grid-line crop-overlay__grid-line--h"
+          :style="{ top: `${pos}%` }"
+        />
+      </div>
+      <div
+        v-if="store.cropPixelSize"
+        class="crop-overlay__dims"
+      >
+        {{ store.cropPixelSize.width }} × {{ store.cropPixelSize.height }} px
+      </div>
       <button
         v-for="handle in HANDLES"
         :key="handle"
@@ -186,22 +205,6 @@ onBeforeUnmount(() => {
         :style="handleStyle(handle)"
         @pointerdown="(e: PointerEvent) => onHandlePointerDown(handle, e)"
       />
-    </div>
-    <div class="crop-overlay__actions">
-      <v-btn
-        size="small"
-        color="primary"
-        @click="onApply"
-      >
-        Apply
-      </v-btn>
-      <v-btn
-        size="small"
-        variant="tonal"
-        @click="onCancel"
-      >
-        Cancel
-      </v-btn>
     </div>
   </div>
 </template>
@@ -230,15 +233,65 @@ onBeforeUnmount(() => {
     cursor: move;
   }
 
+  &__grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__grid-line {
+    position: absolute;
+    background: rgb(255 255 255 / 0.35);
+    pointer-events: none;
+
+    &--v {
+      top: 0;
+      width: 0.0625rem;
+      height: 100%;
+    }
+
+    &--h {
+      left: 0;
+      width: 100%;
+      height: 0.0625rem;
+    }
+  }
+
+  &__dims {
+    position: absolute;
+    top: 0.375rem;
+    left: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    color: #fff;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    background: rgb(0 0 0 / 65%);
+    border-radius: 0.1875rem;
+    pointer-events: none;
+  }
+
   &__handle {
     position: absolute;
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 1rem;
+    height: 1rem;
     padding: 0;
     background: #fff;
     border: 0.0625rem solid #333;
     border-radius: 50%;
+    box-shadow: 0 0 0 0.0625rem rgb(0 0 0 / 25%), 0 0.0625rem 0.1875rem rgb(0 0 0 / 40%);
     transform: translate(-50%, -50%);
+
+    // transparent, oversized hit area so the handle stays easy to grab without
+    // visually growing the circle itself
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1.75rem;
+      height: 1.75rem;
+      content: '';
+      transform: translate(-50%, -50%);
+    }
 
     &--n,
     &--s {
@@ -259,14 +312,6 @@ onBeforeUnmount(() => {
     &--sw {
       cursor: nesw-resize;
     }
-  }
-
-  &__actions {
-    position: absolute;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    display: flex;
-    gap: 0.5rem;
   }
 }
 </style>

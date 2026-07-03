@@ -1,8 +1,6 @@
 // utils
-import { onScopeDispose, ref } from 'vue';
+import { onScopeDispose } from 'vue';
 import type { Ref } from 'vue';
-// models
-import type { CropOp } from '@/shared/models/edit-operation';
 
 export interface NormRect {
   x: number;
@@ -15,8 +13,6 @@ export type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 export const MIN_CROP = 0.05;
 
-const DEFAULT_RECT: NormRect = { x: 0.1, y: 0.1, width: 0.8, height: 0.8 };
-
 // size is clamped before position so the position clamp uses the final size
 export function clampRect(rect: NormRect): NormRect {
   const width = Math.min(1, Math.max(MIN_CROP, rect.width));
@@ -26,12 +22,36 @@ export function clampRect(rect: NormRect): NormRect {
   return { x, y, width, height };
 }
 
+// shrinks the over-long dimension to hit `ratio`, keeps the input rect's center,
+// then clamps into [0,1] with each side >= MIN_CROP
+export function fitToAspect(rect: NormRect, ratio: number): NormRect {
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  let width = Math.min(rect.width, rect.height * ratio);
+  let height = width / ratio;
+  if (width > 1) {
+    width = 1;
+    height = width / ratio;
+  }
+  if (height > 1) {
+    height = 1;
+    width = height * ratio;
+  }
+  // MIN_CROP applies per-axis, so the ratio-consistent floor for width is
+  // whichever of MIN_CROP or MIN_CROP*ratio is larger
+  const minWidth = Math.max(MIN_CROP, MIN_CROP * ratio);
+  if (width < minWidth) {
+    width = minWidth;
+    height = width / ratio;
+  }
+  const x = Math.min(1 - width, Math.max(0, cx - width / 2));
+  const y = Math.min(1 - height, Math.max(0, cy - height / 2));
+  return { x, y, width, height };
+}
+
 // resize handles keep the opposite edge fixed: the moved edge is clamped to
 // [0,1] and against the fixed edge's MIN_CROP margin, never the fixed edge itself
-export function applyHandle(handle: HandleId | 'move', start: NormRect, dx: number, dy: number): NormRect {
-  if (handle === 'move') {
-    return clampRect({ x: start.x + dx, y: start.y + dy, width: start.width, height: start.height });
-  }
+function applyFreeHandle(handle: HandleId, start: NormRect, dx: number, dy: number): NormRect {
   const startRight = start.x + start.width;
   const startBottom = start.y + start.height;
   let left = start.x;
@@ -53,6 +73,103 @@ export function applyHandle(handle: HandleId | 'move', start: NormRect, dx: numb
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+// corner resize with a locked aspect: the diagonally-opposite corner is the anchor,
+// width is driven by horizontal drag and height is derived from `aspect`
+function applyLockedCorner(handle: 'nw' | 'ne' | 'se' | 'sw', start: NormRect, dx: number, aspect: number): NormRect {
+  const minWidth = Math.max(MIN_CROP, MIN_CROP * aspect);
+  const startRight = start.x + start.width;
+  const startBottom = start.y + start.height;
+  if (handle === 'se') {
+    const ax = start.x;
+    const ay = start.y;
+    const maxWidth = Math.min(1 - ax, (1 - ay) * aspect);
+    const width = Math.min(maxWidth, Math.max(minWidth, start.width + dx));
+    const height = width / aspect;
+    return { x: ax, y: ay, width, height };
+  }
+  if (handle === 'nw') {
+    const bx = startRight;
+    const by = startBottom;
+    const maxWidth = Math.min(bx, by * aspect);
+    const width = Math.min(maxWidth, Math.max(minWidth, start.width - dx));
+    const height = width / aspect;
+    return { x: bx - width, y: by - height, width, height };
+  }
+  if (handle === 'ne') {
+    const ax = start.x;
+    const by = startBottom;
+    const maxWidth = Math.min(1 - ax, by * aspect);
+    const width = Math.min(maxWidth, Math.max(minWidth, start.width + dx));
+    const height = width / aspect;
+    return { x: ax, y: by - height, width, height };
+  }
+  // sw
+  const bx = startRight;
+  const ay = start.y;
+  const maxWidth = Math.min(bx, (1 - ay) * aspect);
+  const width = Math.min(maxWidth, Math.max(minWidth, start.width - dx));
+  const height = width / aspect;
+  return { x: bx - width, y: ay, width, height };
+}
+
+// edge resize with a locked aspect: the opposite edge stays fixed, the perpendicular
+// dimension grows/shrinks symmetrically around the rect's own center on that axis
+function applyLockedEdge(handle: 'n' | 's' | 'e' | 'w', start: NormRect, dx: number, dy: number, aspect: number): NormRect {
+  const startRight = start.x + start.width;
+  const startBottom = start.y + start.height;
+  if (handle === 'e' || handle === 'w') {
+    const centerY = start.y + start.height / 2;
+    const maxSpan = 2 * Math.min(centerY, 1 - centerY);
+    const minWidth = Math.max(MIN_CROP, MIN_CROP * aspect);
+    if (handle === 'e') {
+      const left = start.x;
+      const maxWidth = Math.min(1 - left, aspect * maxSpan);
+      const width = Math.min(maxWidth, Math.max(minWidth, start.width + dx));
+      const height = width / aspect;
+      return { x: left, y: centerY - height / 2, width, height };
+    }
+    const right = startRight;
+    const maxWidth = Math.min(right, aspect * maxSpan);
+    const width = Math.min(maxWidth, Math.max(minWidth, start.width - dx));
+    const height = width / aspect;
+    return { x: right - width, y: centerY - height / 2, width, height };
+  }
+  const centerX = start.x + start.width / 2;
+  const maxSpan = 2 * Math.min(centerX, 1 - centerX);
+  const minHeight = Math.max(MIN_CROP, MIN_CROP / aspect);
+  if (handle === 's') {
+    const top = start.y;
+    const maxHeight = Math.min(1 - top, maxSpan / aspect);
+    const height = Math.min(maxHeight, Math.max(minHeight, start.height + dy));
+    const width = height * aspect;
+    return { x: centerX - width / 2, y: top, width, height };
+  }
+  const bottom = startBottom;
+  const maxHeight = Math.min(bottom, maxSpan / aspect);
+  const height = Math.min(maxHeight, Math.max(minHeight, start.height - dy));
+  const width = height * aspect;
+  return { x: centerX - width / 2, y: bottom - height, width, height };
+}
+
+export function applyHandle(
+  handle: HandleId | 'move',
+  start: NormRect,
+  dx: number,
+  dy: number,
+  aspect: number | null = null,
+): NormRect {
+  if (handle === 'move') {
+    return clampRect({ x: start.x + dx, y: start.y + dy, width: start.width, height: start.height });
+  }
+  if (aspect === null) {
+    return applyFreeHandle(handle, start, dx, dy);
+  }
+  if (handle === 'n' || handle === 's' || handle === 'e' || handle === 'w') {
+    return applyLockedEdge(handle, start, dx, dy, aspect);
+  }
+  return applyLockedCorner(handle, start, dx, aspect);
+}
+
 interface DragState {
   handle: HandleId | 'move';
   startX: number;
@@ -61,22 +178,16 @@ interface DragState {
 }
 
 export interface UseCropRect {
-  draft: Ref<NormRect>;
   onHandlePointerDown: (handle: HandleId, e: PointerEvent) => void;
   onBodyPointerDown: (e: PointerEvent) => void;
 }
 
 export default function useCropRect(
   getContainer: () => HTMLElement | null,
-  initial: () => CropOp | null,
+  draft: Ref<NormRect>,
+  getAspect: () => number | null,
 ): UseCropRect {
   // state
-  const initialOp = initial();
-  const draft = ref<NormRect>(
-    initialOp
-      ? { x: initialOp.x, y: initialOp.y, width: initialOp.width, height: initialOp.height }
-      : { ...DEFAULT_RECT },
-  );
   let drag: DragState | null = null;
 
   // helpers
@@ -96,7 +207,7 @@ export default function useCropRect(
       return;
     }
     const { dx, dy } = toNormDelta(e);
-    draft.value = applyHandle(drag.handle, drag.startRect, dx, dy);
+    draft.value = applyHandle(drag.handle, drag.startRect, dx, dy, getAspect());
   }
 
   function onPointerUp(): void {
@@ -122,5 +233,5 @@ export default function useCropRect(
 
   onScopeDispose(onPointerUp);
 
-  return { draft, onHandlePointerDown, onBodyPointerDown };
+  return { onHandlePointerDown, onBodyPointerDown };
 }

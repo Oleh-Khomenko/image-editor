@@ -13,9 +13,11 @@ import {
 import { DocumentError, parseDocument, serializeDocument } from '@/shared/helpers/document';
 import { CanvasRenderer } from '@/shared/helpers/canvas-renderer';
 import { sha256Hex } from '@/shared/helpers/sha256';
+import { fitToAspect, MIN_CROP } from '@/composables/use-crop-rect';
 // models
 import type { Adjustments, CropOp, EditOperation, FilterName } from '@/shared/models/edit-operation';
 import type { SourceMeta } from '@/shared/models/edit-document';
+import type { NormRect } from '@/composables/use-crop-rect';
 
 export const useEditorStore = defineStore('editor', () => {
   // refs
@@ -25,6 +27,8 @@ export const useEditorStore = defineStore('editor', () => {
   const operations = ref<EditOperation[]>([]);
   const viewingOriginal = ref(false);
   const cropEditing = ref(false);
+  const cropDraft = ref<NormRect>({ x: 0.1, y: 0.1, width: 0.8, height: 0.8 });
+  const cropAspect = ref<number | null>(null);
   const undoStack = ref<EditOperation[][]>([]);
   const redoStack = ref<EditOperation[][]>([]);
   const error = ref<string | null>(null);
@@ -48,6 +52,28 @@ export const useEditorStore = defineStore('editor', () => {
   const hasImage = computed<boolean>(() => sourceBitmap.value !== null);
   const canUndo = computed<boolean>(() => undoStack.value.length > 0);
   const canRedo = computed<boolean>(() => redoStack.value.length > 0);
+  const cropPixelSize = computed<{ width: number; height: number } | null>(() =>
+    source.value
+      ? {
+          width: Math.round(source.value.width * cropDraft.value.width),
+          height: Math.round(source.value.height * cropDraft.value.height),
+        }
+      : null,
+  );
+  const aspectOptions = computed<{ label: string; value: number | null }[]>(() => {
+    if (!source.value) {
+      return [{ label: 'Free', value: null }];
+    }
+    const w = source.value.width;
+    const h = source.value.height;
+    return [
+      { label: 'Free', value: null },
+      { label: 'Original', value: 1 },
+      { label: '1:1', value: h / w },
+      { label: '4:3', value: (4 / 3) * (h / w) },
+      { label: '16:9', value: (16 / 9) * (h / w) },
+    ];
+  });
 
   // helpers
   function isAdjustOnlyChange(current: EditOperation[], next: EditOperation[]): boolean {
@@ -129,11 +155,67 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function startCropEditing(): void {
+    const existingCrop = getCrop(operations.value);
+    cropDraft.value = existingCrop
+      ? { x: existingCrop.x, y: existingCrop.y, width: existingCrop.width, height: existingCrop.height }
+      : { x: 0.1, y: 0.1, width: 0.8, height: 0.8 };
+    cropAspect.value = null;
     cropEditing.value = true;
   }
 
   function stopCropEditing(): void {
     cropEditing.value = false;
+  }
+
+  function setCropDraft(rect: NormRect): void {
+    cropDraft.value = rect;
+  }
+
+  function setCropAspect(ratio: number | null): void {
+    cropAspect.value = ratio;
+    if (ratio !== null) {
+      cropDraft.value = fitToAspect(cropDraft.value, ratio);
+    }
+  }
+
+  // sets one crop side from a pixel value, anchored at the top-left corner
+  function setCropSize(axis: 'width' | 'height', px: number): void {
+    const src = source.value;
+    if (!src || !Number.isFinite(px) || px <= 0) {
+      return;
+    }
+    const draft = cropDraft.value;
+    const ratio = cropAspect.value;
+    let width = draft.width;
+    let height = draft.height;
+    if (axis === 'width') {
+      width = px / src.width;
+      if (ratio !== null) {
+        height = width / ratio;
+      }
+    } else {
+      height = px / src.height;
+      if (ratio !== null) {
+        width = height * ratio;
+      }
+    }
+    if (ratio !== null) {
+      const fit = Math.min((1 - draft.x) / width, (1 - draft.y) / height, 1);
+      width *= fit;
+      height *= fit;
+      const grow = Math.max(MIN_CROP / width, MIN_CROP / height, 1);
+      width *= grow;
+      height *= grow;
+    } else {
+      width = Math.min(1 - draft.x, Math.max(MIN_CROP, width));
+      height = Math.min(1 - draft.y, Math.max(MIN_CROP, height));
+    }
+    cropDraft.value = { x: draft.x, y: draft.y, width, height };
+  }
+
+  function applyCrop(): void {
+    setCrop(cropDraft.value);
+    stopCropEditing();
   }
 
   function clearError(): void {
@@ -285,6 +367,8 @@ export const useEditorStore = defineStore('editor', () => {
     operations,
     viewingOriginal,
     cropEditing,
+    cropDraft,
+    cropAspect,
     error,
     busy,
     effectiveOperations,
@@ -294,6 +378,8 @@ export const useEditorStore = defineStore('editor', () => {
     hasImage,
     canUndo,
     canRedo,
+    cropPixelSize,
+    aspectOptions,
     setAdjustment,
     setFilter,
     setCrop,
@@ -304,6 +390,10 @@ export const useEditorStore = defineStore('editor', () => {
     endAdjustGesture,
     startCropEditing,
     stopCropEditing,
+    setCropDraft,
+    setCropAspect,
+    setCropSize,
+    applyCrop,
     clearError,
     setError,
     undo,

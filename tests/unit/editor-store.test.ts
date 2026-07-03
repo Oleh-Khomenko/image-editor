@@ -210,4 +210,28 @@ describe('editor store', () => {
 
     store.busy = false;
   });
+
+  it('sets a crop side from a pixel value anchored at the top-left', () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 1000, height: 500, sha256: 'x' };
+    store.startCropEditing();
+
+    store.setCropSize('width', 400);
+
+    expect(store.cropDraft.x).toBe(0.1);
+    expect(store.cropDraft.y).toBe(0.1);
+    expect(store.cropPixelSize?.width).toBe(400);
+  });
+
+  it('keeps the locked aspect when setting one crop side', () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 1000, height: 1000, sha256: 'x' };
+    store.startCropEditing();
+    store.setCropAspect(1);
+
+    store.setCropSize('width', 300);
+
+    expect(store.cropPixelSize?.width).toBe(300);
+    expect(store.cropPixelSize?.height).toBe(300);
+  });
 });
