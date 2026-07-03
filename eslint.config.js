@@ -14,6 +14,12 @@ export default tseslint.config(
         parser: tseslint.parser,
       },
     },
+    rules: {
+      // TS already reports undefined globals (ts(2304)) via vue-tsc; the base
+      // no-undef rule can't see ambient DOM lib types and false-positives on
+      // them in .vue script blocks, same as the recommended TS override.
+      'no-undef': 'off',
+    },
   },
   {
     rules: {
