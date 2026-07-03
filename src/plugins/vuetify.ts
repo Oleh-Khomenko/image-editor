@@ -1,9 +1,5 @@
-import '@mdi/font/css/materialdesignicons.css';
 import 'vuetify/styles';
 import { createVuetify } from 'vuetify';
+import { icons } from '@/plugins/icons';
 
-export const vuetify = createVuetify({
-  icons: {
-    defaultSet: 'mdi',
-  },
-});
+export const vuetify = createVuetify({ icons });

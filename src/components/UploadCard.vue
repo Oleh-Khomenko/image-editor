@@ -3,6 +3,8 @@
 import { ref } from 'vue';
 // stores
 import useEditorStore from '@/stores/editor';
+// helpers
+import { loadEditor } from '@/editor-loader';
 
 // stores
 const store = useEditorStore();
@@ -23,6 +25,8 @@ function acceptFile(file: File | undefined): void {
 }
 
 function openFileDialog(): void {
+  // prefetch the editor chunk while the user picks a file
+  void loadEditor();
   fileInputRef.value?.click();
 }
 
@@ -34,6 +38,7 @@ function handleFileInput(event: Event): void {
 
 function handleDragOver(): void {
   isDragging.value = true;
+  void loadEditor();
 }
 
 function handleDragLeave(): void {
@@ -47,7 +52,7 @@ function handleDrop(event: DragEvent): void {
 </script>
 
 <template>
-  <div class="upload-card">
+  <main class="upload-card">
     <v-card
       class="upload-card__drop-zone"
       :class="{ 'upload-card__drop-zone--active': isDragging }"
@@ -65,7 +70,7 @@ function handleDrop(event: DragEvent): void {
         <v-btn
           color="primary"
           block
-          prepend-icon="mdi-image-plus"
+          prepend-icon="$imagePlus"
           :loading="store.busy"
           @click="openFileDialog"
         >
@@ -83,7 +88,7 @@ function handleDrop(event: DragEvent): void {
         >
       </v-card-text>
     </v-card>
-  </div>
+  </main>
 </template>
 
 <style scoped lang="scss">

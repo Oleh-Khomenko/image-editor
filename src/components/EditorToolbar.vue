@@ -113,7 +113,7 @@ async function onImageChange(event: Event): Promise<void> {
   >
     <template v-if="cropEditing">
       <v-btn
-        icon="mdi-close"
+        icon="$close"
         variant="text"
         aria-label="Cancel crop"
         @click="store.stopCropEditing()"
@@ -204,7 +204,7 @@ async function onImageChange(event: Event): Promise<void> {
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
-            icon="mdi-undo"
+            icon="$undo"
             variant="text"
             aria-label="Undo"
             :disabled="!canUndo"
@@ -219,7 +219,7 @@ async function onImageChange(event: Event): Promise<void> {
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
-            icon="mdi-redo"
+            icon="$redo"
             variant="text"
             aria-label="Redo"
             :disabled="!canRedo"
@@ -234,7 +234,7 @@ async function onImageChange(event: Event): Promise<void> {
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
-            icon="mdi-eye-outline"
+            icon="$eyeOutline"
             variant="text"
             aria-label="Toggle original / edited"
             :aria-pressed="viewingOriginal"
@@ -250,7 +250,7 @@ async function onImageChange(event: Event): Promise<void> {
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
-            icon="mdi-restore"
+            icon="$restore"
             variant="text"
             aria-label="Reset all edits"
             @click="store.resetAll()"
@@ -266,7 +266,7 @@ async function onImageChange(event: Event): Promise<void> {
       <v-btn
         color="primary"
         variant="flat"
-        prepend-icon="mdi-download"
+        prepend-icon="$download"
         :loading="busy"
         class="editor-toolbar__export"
         @click="onExportImage"
@@ -277,7 +277,7 @@ async function onImageChange(event: Event): Promise<void> {
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
-            icon="mdi-dots-vertical"
+            icon="$dotsVertical"
             variant="text"
             aria-label="More actions"
           />
@@ -285,24 +285,24 @@ async function onImageChange(event: Event): Promise<void> {
         <v-list density="compact">
           <v-list-item
             title="New image"
-            prepend-icon="mdi-image-plus"
+            prepend-icon="$imagePlus"
             :disabled="store.busy || store.cropEditing"
             @click="imageInputRef?.click()"
           />
           <v-divider />
           <v-list-item
             title="Export edits (JSON)"
-            prepend-icon="mdi-code-json"
+            prepend-icon="$codeJson"
             @click="onExportJson(false)"
           />
           <v-list-item
             title="Export edits with image"
-            prepend-icon="mdi-file-image"
+            prepend-icon="$fileImage"
             @click="onExportJson(true)"
           />
           <v-list-item
             title="Import edits (JSON)"
-            prepend-icon="mdi-import"
+            prepend-icon="$import"
             :disabled="store.busy || store.cropEditing"
             @click="jsonInputRef?.click()"
           />

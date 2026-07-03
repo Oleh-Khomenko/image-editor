@@ -15,7 +15,7 @@ const store = useEditorStore();
       <v-btn
         variant="tonal"
         block
-        prepend-icon="mdi-crop"
+        prepend-icon="$crop"
         :disabled="!store.hasImage || store.cropEditing"
         @click="store.startCropEditing()"
       >
@@ -25,7 +25,7 @@ const store = useEditorStore();
         v-if="store.crop"
         variant="tonal"
         block
-        prepend-icon="mdi-crop-free"
+        prepend-icon="$cropFree"
         @click="store.clearCrop()"
       >
         Remove crop

@@ -1,13 +1,18 @@
 <script setup lang="ts">
 // utils
+import { defineAsyncComponent, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 // components
-import EditorLayout from '@/components/EditorLayout.vue';
 import UploadCard from '@/components/UploadCard.vue';
 // composables
 import useUnsavedGuard from '@/composables/use-unsaved-guard';
 // stores
 import useEditorStore from '@/stores/editor';
+// helpers
+import { loadEditor } from '@/editor-loader';
+
+// custom constants
+const EditorLayout = defineAsyncComponent(loadEditor);
 
 // stores
 const store = useEditorStore();
@@ -22,6 +27,16 @@ function onSnackbar(value: boolean): void {
     store.clearError();
   }
 }
+
+// lifecycle
+onMounted(() => {
+  const idle = window.requestIdleCallback;
+  if (idle) {
+    idle(() => void loadEditor());
+    return;
+  }
+  window.setTimeout(() => void loadEditor(), 200);
+});
 </script>
 
 <template>

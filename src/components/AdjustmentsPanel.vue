@@ -49,7 +49,7 @@ function onAdjust(field: Field, value: number): void {
           <span class="adjustments-panel__value">{{ adjustments[field.key] }}</span>
           <v-btn
             v-if="adjustments[field.key] !== 0"
-            icon="mdi-restore"
+            icon="$restore"
             size="x-small"
             variant="text"
             density="comfortable"
@@ -72,7 +72,7 @@ function onAdjust(field: Field, value: number): void {
         class="adjustments-panel__reset"
         variant="tonal"
         block
-        prepend-icon="mdi-restore"
+        prepend-icon="$restore"
         :disabled="!hasAdjustments"
         @click="store.resetAdjustments()"
       >

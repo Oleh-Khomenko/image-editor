@@ -22,8 +22,7 @@ export function clampRect(rect: NormRect): NormRect {
   return { x, y, width, height };
 }
 
-// shrinks the over-long dimension to hit `ratio`, keeps the input rect's center,
-// then clamps into [0,1] with each side >= MIN_CROP
+// fits `ratio` inside the rect, keeps its center, clamps to [0,1] and >= MIN_CROP
 export function fitToAspect(rect: NormRect, ratio: number): NormRect {
   const cx = rect.x + rect.width / 2;
   const cy = rect.y + rect.height / 2;
@@ -49,8 +48,7 @@ export function fitToAspect(rect: NormRect, ratio: number): NormRect {
   return { x, y, width, height };
 }
 
-// resize handles keep the opposite edge fixed: the moved edge is clamped to
-// [0,1] and against the fixed edge's MIN_CROP margin, never the fixed edge itself
+// the dragged edge is clamped against the fixed opposite edge, which never moves
 function applyFreeHandle(handle: HandleId, start: NormRect, dx: number, dy: number): NormRect {
   const startRight = start.x + start.width;
   const startBottom = start.y + start.height;
@@ -73,8 +71,7 @@ function applyFreeHandle(handle: HandleId, start: NormRect, dx: number, dy: numb
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-// corner resize with a locked aspect: the diagonally-opposite corner is the anchor,
-// width is driven by horizontal drag and height is derived from `aspect`
+// the diagonally-opposite corner is the anchor; height is derived from `aspect`
 function applyLockedCorner(handle: 'nw' | 'ne' | 'se' | 'sw', start: NormRect, dx: number, aspect: number): NormRect {
   const minWidth = Math.max(MIN_CROP, MIN_CROP * aspect);
   const startRight = start.x + start.width;
@@ -103,7 +100,6 @@ function applyLockedCorner(handle: 'nw' | 'ne' | 'se' | 'sw', start: NormRect, d
     const height = width / aspect;
     return { x: ax, y: by - height, width, height };
   }
-  // sw
   const bx = startRight;
   const ay = start.y;
   const maxWidth = Math.min(bx, (1 - ay) * aspect);
@@ -112,8 +108,7 @@ function applyLockedCorner(handle: 'nw' | 'ne' | 'se' | 'sw', start: NormRect, d
   return { x: bx - width, y: ay, width, height };
 }
 
-// edge resize with a locked aspect: the opposite edge stays fixed, the perpendicular
-// dimension grows/shrinks symmetrically around the rect's own center on that axis
+// opposite edge stays fixed; the perpendicular side grows symmetrically to hold the ratio
 function applyLockedEdge(handle: 'n' | 's' | 'e' | 'w', start: NormRect, dx: number, dy: number, aspect: number): NormRect {
   const startRight = start.x + start.width;
   const startBottom = start.y + start.height;
