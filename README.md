@@ -14,9 +14,14 @@ npm run dev
 Then open the URL Vite prints (http://localhost:5173 by default).
 
 ```
-npm test      # unit tests
+npm test      # unit and component tests (Vitest)
+npm run e2e   # end-to-end tests (Playwright)
 npm run build # type-check + production build
+npm run lint  # eslint
 ```
+
+CI runs lint, unit tests, build, and the Playwright e2e suite on every push and
+pull request (`.github/workflows/ci.yml`).
 
 ## How edits are modelled
 
@@ -68,4 +73,5 @@ at the cost of size.
 
 ## Stack
 
-Vue 3, Vuetify 3, Pinia, TypeScript, Vite. Tests run on Vitest.
+Vue 3, Vuetify 3, Pinia, TypeScript, Vite. Unit and component tests run on
+Vitest; end-to-end tests on Playwright.

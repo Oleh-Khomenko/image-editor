@@ -7,3 +7,6 @@ coverage
 .vscode
 .superpowers/
 .playwright-mcp/
+test-results/
+playwright-report/
+playwright/.cache/
