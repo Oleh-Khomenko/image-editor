@@ -1,9 +1,12 @@
 <script setup lang="ts">
+// utils
 import { storeToRefs } from 'pinia';
 import { useTemplateRef } from 'vue';
+// stores
 import useEditorStore from '@/stores/editor';
-import { CanvasRenderer } from '@/core/render/canvas-renderer';
-import { download, downloadText, exportFilename } from '@/core/util/download';
+// helpers
+import { CanvasRenderer } from '@/shared/helpers/canvas-renderer';
+import { download, downloadText, exportFilename } from '@/shared/helpers/download';
 
 // stores
 const store = useEditorStore();
@@ -13,29 +16,10 @@ const { viewingOriginal, canUndo, canRedo, hasImage, error } = storeToRefs(store
 const fileInputRef = useTemplateRef<HTMLInputElement>('fileInput');
 
 // helpers
-
 // mime types the renderer can produce; anything else falls back to png
 function extFromMime(mime: string): string {
   const exts: Record<string, string> = { 'image/jpeg': 'jpg', 'image/webp': 'webp' };
   return exts[mime] ?? 'png';
-}
-
-// handlers
-
-function onViewOriginal(): void {
-  store.toggleViewOriginal();
-}
-
-function onUndo(): void {
-  store.undo();
-}
-
-function onRedo(): void {
-  store.redo();
-}
-
-function onReset(): void {
-  store.resetAll();
 }
 
 // exports the real edits (store.operations), never the view-original preview
@@ -87,7 +71,7 @@ async function onFileChange(event: Event): Promise<void> {
         block
         :color="viewingOriginal ? 'primary' : undefined"
         :disabled="!hasImage"
-        @click="onViewOriginal"
+        @click="store.toggleViewOriginal()"
       >
         View original
       </v-btn>
@@ -95,14 +79,14 @@ async function onFileChange(event: Event): Promise<void> {
         <v-btn
           variant="tonal"
           :disabled="!canUndo"
-          @click="onUndo"
+          @click="store.undo()"
         >
           Undo
         </v-btn>
         <v-btn
           variant="tonal"
           :disabled="!canRedo"
-          @click="onRedo"
+          @click="store.redo()"
         >
           Redo
         </v-btn>
@@ -111,7 +95,7 @@ async function onFileChange(event: Event): Promise<void> {
         variant="tonal"
         block
         :disabled="!hasImage"
-        @click="onReset"
+        @click="store.resetAll()"
       >
         Reset
       </v-btn>

@@ -1,6 +1,8 @@
-import { ref } from 'vue';
+// utils
+import { onScopeDispose, ref } from 'vue';
 import type { Ref } from 'vue';
-import type { CropOp } from '@/core/operations/types';
+// models
+import type { CropOp } from '@/shared/models/edit-operation';
 
 export interface NormRect {
   x: number;
@@ -15,9 +17,7 @@ export const MIN_CROP = 0.05;
 
 const DEFAULT_RECT: NormRect = { x: 0.1, y: 0.1, width: 0.8, height: 0.8 };
 
-// Pure geometry: keeps the rect inside [0,1] on both axes and never lets it
-// shrink below MIN_CROP. Order matters — size is clamped first so the
-// subsequent position clamp (1 - size) uses the final size.
+// size is clamped before position so the position clamp uses the final size
 export function clampRect(rect: NormRect): NormRect {
   const width = Math.min(1, Math.max(MIN_CROP, rect.width));
   const height = Math.min(1, Math.max(MIN_CROP, rect.height));
@@ -50,11 +50,9 @@ export default function useCropRect(
       ? { x: initialOp.x, y: initialOp.y, width: initialOp.width, height: initialOp.height }
       : { ...DEFAULT_RECT },
   );
-
   let drag: DragState | null = null;
 
   // helpers
-
   function toNormDelta(e: PointerEvent): { dx: number; dy: number } {
     const container = getContainer();
     if (!container || !drag) {
@@ -66,8 +64,6 @@ export default function useCropRect(
     return { dx, dy };
   }
 
-  // each handle maps a pointer delta onto the edges it owns; opposite edges
-  // are untouched so e.g. dragging 'e' never moves x/y.
   function applyHandle(handle: HandleId | 'move', start: NormRect, dx: number, dy: number): NormRect {
     if (handle === 'move') {
       return { x: start.x + dx, y: start.y + dy, width: start.width, height: start.height };
@@ -110,8 +106,6 @@ export default function useCropRect(
     window.addEventListener('pointerup', onPointerUp);
   }
 
-  // handlers
-
   function onHandlePointerDown(handle: HandleId, e: PointerEvent): void {
     e.stopPropagation();
     startDrag(handle, e);
@@ -120,6 +114,8 @@ export default function useCropRect(
   function onBodyPointerDown(e: PointerEvent): void {
     startDrag('move', e);
   }
+
+  onScopeDispose(onPointerUp);
 
   return { draft, onHandlePointerDown, onBodyPointerDown };
 }

@@ -1,10 +1,5 @@
-import type {
-  Adjustments,
-  CropOp,
-  EditOperation,
-  FilterName,
-} from '@/core/operations/types';
-import { DEFAULT_ADJUSTMENTS } from '@/core/operations/types';
+import type { Adjustments, CropOp, EditOperation, FilterName } from '@/shared/models/edit-operation';
+import { DEFAULT_ADJUSTMENTS } from '@/shared/constants/adjustments';
 
 const ORDER: Record<EditOperation['type'], number> = {
   crop: 0,
@@ -20,19 +15,13 @@ export function orderOperations(ops: EditOperation[]): EditOperation[] {
   return [...ops].sort((a, b) => ORDER[a.type] - ORDER[b.type]);
 }
 
-export function upsertOperation(
-  ops: EditOperation[],
-  op: EditOperation,
-): EditOperation[] {
+export function upsertOperation(ops: EditOperation[], op: EditOperation): EditOperation[] {
   const next = ops.filter((existing) => existing.type !== op.type);
   next.push(op);
   return orderOperations(next);
 }
 
-export function removeOperation(
-  ops: EditOperation[],
-  type: EditOperation['type'],
-): EditOperation[] {
+export function removeOperation(ops: EditOperation[], type: EditOperation['type']): EditOperation[] {
   return ops.filter((op) => op.type !== type);
 }
 

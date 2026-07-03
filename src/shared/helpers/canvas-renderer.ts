@@ -1,9 +1,9 @@
-import type { CropOp, EditOperation } from '@/core/operations/types';
-import { getCrop } from '@/core/operations/model';
-import { toCssFilter } from '@/core/render/params';
+import type { CropOp, EditOperation } from '@/shared/models/edit-operation';
+import { getCrop } from '@/shared/helpers/operations';
+import { toCssFilter } from '@/shared/helpers/css-filter';
 
-// Preview renders at display resolution; rendering the full native size every
-// slider tick is wasted work on the CPU 2D pipeline. Export always renders full.
+// preview renders at display resolution; the full native size every slider tick
+// would be wasted CPU work. Export always renders full (maxSize = Infinity).
 const PREVIEW_MAX_SIZE = 2000;
 
 export function cropOutputSize(
@@ -51,8 +51,7 @@ export class CanvasRenderer {
     });
   }
 
-  // preview and export share this path, so what you see matches what you export;
-  // maxSize only bounds the backing-store size (Infinity = full resolution)
+  // shared by preview and export so what you see matches what you export
   private draw(source: ImageBitmap, ops: EditOperation[], maxSize: number): void {
     const crop = getCrop(ops);
     const sx = crop ? crop.x * source.width : 0;

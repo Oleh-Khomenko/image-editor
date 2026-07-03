@@ -1,26 +1,27 @@
+// utils
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import type { Ref } from 'vue';
-import { CanvasRenderer } from '@/core/render/canvas-renderer';
+// stores
 import useEditorStore from '@/stores/editor';
+// helpers
+import { CanvasRenderer } from '@/shared/helpers/canvas-renderer';
 
 export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): void {
   // stores
   const store = useEditorStore();
 
-  // renderer state
+  // state
   let renderer: CanvasRenderer | null = null;
   let frame = 0;
 
   // helpers
-
   function draw(): void {
     const canvas = canvasRef.value;
     const bitmap = store.sourceBitmap;
     if (!canvas || !bitmap) {
       return;
     }
-    // the renderer is bound to the canvas element, not the image, so one
-    // instance serves every source for this component's lifetime
+    // one renderer serves every source; it is bound to the canvas, not the image
     if (!renderer) {
       renderer = new CanvasRenderer(canvas);
     }
@@ -38,7 +39,6 @@ export default function useRenderer(canvasRef: Ref<HTMLCanvasElement | null>): v
   }
 
   // lifecycle
-
   onMounted(() => {
     schedule();
   });

@@ -1,7 +1,11 @@
 <script setup lang="ts">
+// utils
 import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
+// stores
 import useEditorStore from '@/stores/editor';
+// composables
 import useCropRect from '@/composables/use-crop-rect';
+// models
 import type { HandleId, NormRect } from '@/composables/use-crop-rect';
 
 // props
@@ -27,11 +31,8 @@ const store = useEditorStore();
 const rootRef = useTemplateRef<HTMLDivElement>('root');
 
 // state
-
-// pixel box (relative to the offset parent) that mirrors the canvas's
-// letterboxed rendered rect; the canvas is object-fit:contain inside the
-// same positioned parent, so measuring it directly is the only reliable way
-// to line this overlay up with it exactly.
+// mirrors the canvas's letterboxed rendered rect, measured directly so the
+// overlay lines up with the object-fit:contain image
 const box = ref<{ left: number; top: number; width: number; height: number }>({
   left: 0,
   top: 0,
@@ -46,7 +47,6 @@ const { draft, onHandlePointerDown, onBodyPointerDown } = useCropRect(
 );
 
 // helpers
-
 function measure(): void {
   const canvas = props.getCanvas();
   const parent = rootRef.value?.offsetParent as HTMLElement | null;
@@ -94,7 +94,6 @@ function onCancel(): void {
 }
 
 // lifecycle
-
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {

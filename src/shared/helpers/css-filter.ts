@@ -1,5 +1,5 @@
-import type { EditOperation } from '@/core/operations/types';
-import { clampAdjustment, getAdjustments, getFilter } from '@/core/operations/model';
+import type { EditOperation } from '@/shared/models/edit-operation';
+import { clampAdjustment, getAdjustments, getFilter } from '@/shared/helpers/operations';
 
 // -100..100 slider value -> CSS filter factor (0 -> 1.0 neutral, 100 -> 2.0)
 function factor(value: number): number {

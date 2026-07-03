@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exportFilename } from '@/core/util/download';
+import { exportFilename } from '@/shared/helpers/download';
 
 describe('exportFilename', () => {
   it('inserts the suffix before a simple extension', () => {

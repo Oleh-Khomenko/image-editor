@@ -1,5 +1,7 @@
 <script setup lang="ts">
+// utils
 import { ref } from 'vue';
+// stores
 import useEditorStore from '@/stores/editor';
 
 // stores
@@ -12,7 +14,6 @@ const isDragging = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // helpers
-
 function acceptFile(file: File | undefined): void {
   if (!file || !file.type.startsWith('image/')) {
     return;

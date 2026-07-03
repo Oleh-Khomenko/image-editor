@@ -1,5 +1,5 @@
-import type { EditOperation, FilterName } from '@/core/operations/types';
-import type { SourceMeta } from '@/core/document/document';
+import type { EditOperation, FilterName } from '@/shared/models/edit-operation';
+import type { SourceMeta } from '@/shared/models/edit-document';
 
 const FILTER_NAMES: readonly FilterName[] = ['grayscale', 'sepia'];
 

@@ -1,6 +1,7 @@
+// utils
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import type { Adjustments, CropOp, EditOperation, FilterName } from '@/core/operations/types';
+// helpers
 import {
   clampAdjustment,
   getAdjustments,
@@ -8,10 +9,12 @@ import {
   getFilter,
   removeOperation,
   upsertOperation,
-} from '@/core/operations/model';
-import type { SourceMeta } from '@/core/document/document';
-import { parseDocument, serializeDocument } from '@/core/document/document';
-import { sha256Hex } from '@/core/util/sha256';
+} from '@/shared/helpers/operations';
+import { parseDocument, serializeDocument } from '@/shared/helpers/document';
+import { sha256Hex } from '@/shared/helpers/sha256';
+// models
+import type { Adjustments, CropOp, EditOperation, FilterName } from '@/shared/models/edit-operation';
+import type { SourceMeta } from '@/shared/models/edit-document';
 
 export const useEditorStore = defineStore('editor', () => {
   // refs
@@ -24,9 +27,8 @@ export const useEditorStore = defineStore('editor', () => {
   const undoStack = ref<EditOperation[][]>([]);
   const redoStack = ref<EditOperation[][]>([]);
   const error = ref<string | null>(null);
-
-  // tracks whether the last commit was a continuous slider tick, so consecutive
-  // setAdjustment ticks coalesce into a single undo step instead of one per tick
+  const busy = ref(false);
+  // true while a slider drag is in progress, so its ticks coalesce into one undo step
   let lastCommitWasLiveAdjust = false;
 
   // computed
@@ -47,7 +49,6 @@ export const useEditorStore = defineStore('editor', () => {
   const canRedo = computed<boolean>(() => redoStack.value.length > 0);
 
   // helpers
-
   function isAdjustOnlyChange(current: EditOperation[], next: EditOperation[]): boolean {
     const adjustChanged =
       JSON.stringify(getAdjustments(current)) !== JSON.stringify(getAdjustments(next));
@@ -103,12 +104,11 @@ export const useEditorStore = defineStore('editor', () => {
     commit([]);
   }
 
-  // view-original is a display toggle only; it must not touch history
+  // display toggle only; must not touch operations or history
   function toggleViewOriginal(): void {
     viewingOriginal.value = !viewingOriginal.value;
   }
 
-  // undo/redo move snapshots between stacks directly, bypassing commit
   function undo(): void {
     lastCommitWasLiveAdjust = false;
     if (!canUndo.value) {
@@ -128,9 +128,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // async helpers
-
   // FileReader's data-URL read has no promise-based API
-  async function blobToDataUrl(blob: Blob): Promise<string> {
+  function blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = (): void => resolve(reader.result as string);
@@ -142,6 +141,7 @@ export const useEditorStore = defineStore('editor', () => {
   async function loadImage(file: File): Promise<void> {
     error.value = null;
     lastCommitWasLiveAdjust = false;
+    busy.value = true;
     try {
       const buf = await file.arrayBuffer();
       const hash = await sha256Hex(buf);
@@ -162,12 +162,15 @@ export const useEditorStore = defineStore('editor', () => {
       viewingOriginal.value = false;
     } catch {
       error.value = 'Failed to load image';
+    } finally {
+      busy.value = false;
     }
   }
 
   async function importJson(text: string): Promise<void> {
     error.value = null;
     lastCommitWasLiveAdjust = false;
+    busy.value = true;
     try {
       const doc = parseDocument(text);
       if (doc.embedded) {
@@ -187,6 +190,8 @@ export const useEditorStore = defineStore('editor', () => {
       viewingOriginal.value = false;
     } catch {
       error.value = 'Invalid document';
+    } finally {
+      busy.value = false;
     }
   }
 
@@ -211,6 +216,7 @@ export const useEditorStore = defineStore('editor', () => {
     undoStack,
     redoStack,
     error,
+    busy,
     effectiveOperations,
     adjustments,
     filter,

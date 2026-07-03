@@ -1,11 +1,15 @@
 <script setup lang="ts">
+// utils
 import { useTemplateRef } from 'vue';
+// components
 import ActionsPanel from '@/components/ActionsPanel.vue';
 import AdjustmentsPanel from '@/components/AdjustmentsPanel.vue';
 import CropOverlay from '@/components/CropOverlay.vue';
 import EditorCanvas from '@/components/EditorCanvas.vue';
 import FilterPanel from '@/components/FilterPanel.vue';
+// stores
 import useEditorStore from '@/stores/editor';
+// models
 import type { NormRect } from '@/composables/use-crop-rect';
 
 // stores
@@ -15,7 +19,6 @@ const store = useEditorStore();
 const editorCanvasRef = useTemplateRef<InstanceType<typeof EditorCanvas>>('editorCanvas');
 
 // helpers
-
 function getCanvas(): HTMLCanvasElement | null {
   return editorCanvasRef.value?.getCanvas() ?? null;
 }

@@ -1,20 +1,6 @@
-import type { EditOperation } from '@/core/operations/types';
-import { isEditOperation, isSourceMeta } from '@/core/document/validation';
-
-export interface SourceMeta {
-  name: string;
-  mimeType: string;
-  width: number;
-  height: number;
-  sha256: string;
-}
-
-export interface EditDocument {
-  version: 1;
-  source: SourceMeta;
-  operations: EditOperation[];
-  embedded?: string;
-}
+import type { EditOperation } from '@/shared/models/edit-operation';
+import type { EditDocument, SourceMeta } from '@/shared/models/edit-document';
+import { isEditOperation, isSourceMeta } from '@/shared/helpers/document-validation';
 
 export class DocumentError extends Error {}
 

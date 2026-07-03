@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cropOutputSize } from '@/core/render/canvas-renderer';
+import { cropOutputSize } from '@/shared/helpers/canvas-renderer';
 
 describe('cropOutputSize', () => {
   it('returns the rounded source size when there is no crop', () => {

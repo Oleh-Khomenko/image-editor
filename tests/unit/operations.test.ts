@@ -7,8 +7,8 @@ import {
   orderOperations,
   removeOperation,
   upsertOperation,
-} from '@/core/operations/model';
-import type { EditOperation } from '@/core/operations/types';
+} from '@/shared/helpers/operations';
+import type { EditOperation } from '@/shared/models/edit-operation';
 
 describe('operations model', () => {
   it('clamps and rounds adjustments', () => {

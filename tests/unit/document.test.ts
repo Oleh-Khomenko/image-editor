@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DocumentError, parseDocument, serializeDocument } from '@/core/document/document';
-import type { SourceMeta } from '@/core/document/document';
+import { DocumentError, parseDocument, serializeDocument } from '@/shared/helpers/document';
+import type { SourceMeta } from '@/shared/models/edit-document';
 
 const meta: SourceMeta = {
   name: 'a.png',

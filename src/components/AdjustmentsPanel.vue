@@ -1,5 +1,7 @@
 <script setup lang="ts">
+// utils
 import { storeToRefs } from 'pinia';
+// stores
 import useEditorStore from '@/stores/editor';
 
 // stores

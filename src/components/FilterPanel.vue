@@ -1,8 +1,12 @@
 <script setup lang="ts">
+// utils
 import { storeToRefs } from 'pinia';
+// stores
 import useEditorStore from '@/stores/editor';
-import { FILTER_OPTIONS } from '@/core/operations/filters';
-import type { FilterName } from '@/core/operations/types';
+// models
+import type { FilterName } from '@/shared/models/edit-operation';
+// constants
+import { FILTER_OPTIONS } from '@/shared/constants/filters';
 
 // stores
 const store = useEditorStore();

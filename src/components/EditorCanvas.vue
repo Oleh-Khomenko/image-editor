@@ -1,5 +1,7 @@
 <script setup lang="ts">
+// utils
 import { useTemplateRef } from 'vue';
+// composables
 import useRenderer from '@/composables/use-renderer';
 
 // template refs
@@ -7,8 +9,8 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
 
 useRenderer(canvasRef);
 
-// CropOverlay needs the live canvas element to measure its letterboxed
-// rendered box, so it can position itself pixel-for-pixel over it.
+// expose
+// CropOverlay measures this canvas to position itself over the letterboxed image
 defineExpose({ getCanvas: (): HTMLCanvasElement | null => canvasRef.value });
 </script>
 

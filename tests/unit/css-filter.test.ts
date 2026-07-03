@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toCssFilter } from '@/core/render/params';
+import { toCssFilter } from '@/shared/helpers/css-filter';
 
 describe('toCssFilter', () => {
   it('returns null when nothing is applied', () => {
