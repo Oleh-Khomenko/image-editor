@@ -55,9 +55,12 @@ async function onExportImage(): Promise<void> {
   }
   const canvas = document.createElement('canvas');
   const renderer = createRenderer(canvas, { width: source.width, height: source.height });
-  const blob = await renderer.toBlob(sourceBitmap, store.operations, source.mimeType);
-  renderer.dispose();
-  download(blob, exportFilename(source.name, '-edited', extFromMime(source.mimeType)));
+  try {
+    const blob = await renderer.toBlob(sourceBitmap, store.operations, source.mimeType);
+    download(blob, exportFilename(source.name, '-edited', extFromMime(source.mimeType)));
+  } finally {
+    renderer.dispose();
+  }
 }
 
 async function onExportJson(embed: boolean): Promise<void> {

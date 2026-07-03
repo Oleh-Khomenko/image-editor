@@ -7,7 +7,7 @@ export function exportFilename(sourceName: string, suffix: string, ext: string):
 export function download(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   triggerDownload(url, filename);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function downloadText(text: string, filename: string, mime: string): void {

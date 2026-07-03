@@ -59,13 +59,30 @@ describe('createRenderer', () => {
 
   it('falls back to CanvasRenderer when the source exceeds the max texture size', () => {
     vi.spyOn(WebGLRenderer, 'isSupported').mockReturnValue(true);
-    vi.spyOn(selectRenderer, 'maxTextureSize').mockReturnValue(256);
     const canvas = document.createElement('canvas');
     stub2dContext(canvas);
 
-    const renderer = createRenderer(canvas, { width: 2000, height: 2000 });
+    const renderer = createRenderer(
+      canvas,
+      { width: 2000, height: 2000 },
+      () => 256,
+    );
 
     expect(renderer).toBeInstanceOf(CanvasRenderer);
+    expectRendererShape(renderer);
+  });
+
+  it('selects WebGLRenderer when the source exactly matches the max texture size', () => {
+    vi.spyOn(WebGLRenderer, 'isSupported').mockReturnValue(true);
+    const canvas = document.createElement('canvas');
+
+    const renderer = createRenderer(
+      canvas,
+      { width: 256, height: 256 },
+      () => 256,
+    );
+
+    expect(renderer).toBeInstanceOf(WebGLRenderer);
     expectRendererShape(renderer);
   });
 

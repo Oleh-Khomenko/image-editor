@@ -1,8 +1,8 @@
 {
   "name": "live-art-test",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
@@ -10,10 +10,6 @@
     "test": "vitest run",
     "lint": "eslint ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "pinia": "^3.0.4",
