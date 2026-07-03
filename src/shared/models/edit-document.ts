@@ -1,3 +1,4 @@
+// models
 import type { EditOperation } from '@/shared/models/edit-operation';
 
 export interface SourceMeta {

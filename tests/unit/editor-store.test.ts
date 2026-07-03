@@ -108,4 +108,106 @@ describe('editor store', () => {
     expect(store.effectiveOperations.some((op) => op.type === 'adjust')).toBe(true);
     expect(store.operations.some((op) => op.type === 'crop')).toBe(true);
   });
+
+  it('endAdjustGesture separates drags into distinct undo steps', () => {
+    const store = useEditorStore();
+    store.setAdjustment({ brightness: 10 });
+    store.setAdjustment({ brightness: 20 });
+
+    store.endAdjustGesture();
+
+    store.setAdjustment({ contrast: 30 });
+
+    expect(store.adjustments.brightness).toBe(20);
+    expect(store.adjustments.contrast).toBe(30);
+
+    store.undo();
+    expect(store.adjustments.contrast).toBe(0);
+    expect(store.adjustments.brightness).toBe(20);
+
+    store.undo();
+    expect(store.adjustments.brightness).toBe(0);
+  });
+
+  it('importJson applies operations-only doc against matching source and clamps adjustments', async () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' };
+
+    await store.importJson(
+      JSON.stringify({
+        version: 1,
+        source: { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' },
+        operations: [{ type: 'adjust', brightness: 500, contrast: -999, saturation: 0 }],
+      }),
+    );
+
+    expect(store.error).toBeNull();
+    expect(store.adjustments.brightness).toBe(100);
+    expect(store.adjustments.contrast).toBe(-100);
+  });
+
+  it('importJson rejects a document whose source sha does not match the loaded image', async () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' };
+
+    await store.importJson(
+      JSON.stringify({
+        version: 1,
+        source: { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'zzz' },
+        operations: [{ type: 'filter', name: 'sepia' }],
+      }),
+    );
+
+    expect(store.error).toBe('Document does not match the loaded image');
+    expect(store.operations).toEqual([]);
+  });
+
+  it('importJson surfaces the DocumentError message for invalid JSON', async () => {
+    const store = useEditorStore();
+
+    await store.importJson('{ not json');
+
+    expect(typeof store.error).toBe('string');
+    expect(store.error).not.toBeNull();
+  });
+
+  it('importJson rejects an out-of-range crop operation', async () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' };
+
+    await store.importJson(
+      JSON.stringify({
+        version: 1,
+        source: { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' },
+        operations: [{ type: 'crop', x: 0, y: 0, width: 2, height: 1 }],
+      }),
+    );
+
+    expect(store.error).not.toBeNull();
+    expect(store.operations).toEqual([]);
+  });
+
+  it('exportJson round-trips operations-only without an embedded image', async () => {
+    const store = useEditorStore();
+    store.source = { name: 'a.png', mimeType: 'image/png', width: 10, height: 10, sha256: 'abc' };
+    store.operations = [{ type: 'filter', name: 'sepia' }];
+
+    const json = await store.exportJson(false);
+    const doc = JSON.parse(json);
+
+    expect(doc.version).toBe(1);
+    expect(doc.operations).toEqual([{ type: 'filter', name: 'sepia' }]);
+    expect(doc.embedded).toBeUndefined();
+  });
+
+  it('importJson is a no-op while busy', async () => {
+    const store = useEditorStore();
+    store.busy = true;
+
+    await store.importJson('{}');
+
+    expect(store.error).toBeNull();
+
+    store.busy = false;
+  });
 });

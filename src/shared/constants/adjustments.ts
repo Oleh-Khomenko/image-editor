@@ -1,3 +1,4 @@
+// models
 import type { Adjustments } from '@/shared/models/edit-operation';
 
 export const DEFAULT_ADJUSTMENTS: Adjustments = {

@@ -1,4 +1,6 @@
+// models
 import type { EditOperation } from '@/shared/models/edit-operation';
+// helpers
 import { clampAdjustment, getAdjustments, getFilter } from '@/shared/helpers/operations';
 
 // -100..100 slider value -> CSS filter factor (0 -> 1.0 neutral, 100 -> 2.0)

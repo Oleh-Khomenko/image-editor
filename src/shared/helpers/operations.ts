@@ -1,4 +1,6 @@
+// models
 import type { Adjustments, CropOp, EditOperation, FilterName } from '@/shared/models/edit-operation';
+// constants
 import { DEFAULT_ADJUSTMENTS } from '@/shared/constants/adjustments';
 
 const ORDER: Record<EditOperation['type'], number> = {

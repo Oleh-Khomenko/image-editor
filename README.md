@@ -35,15 +35,20 @@ is at most one of each; changing a slider replaces the existing `adjust` entry
 rather than stacking. Undo/redo is just snapshots of this array, and "view
 original" renders with an empty array without discarding what you have.
 
-Everything above lives in `src/core`, which is plain TypeScript with no Vue
+Everything above lives in `src/shared`, which is plain TypeScript with no Vue
 imports, so the model, the JSON format, and the render maths are unit-tested on
-their own. The Pinia store in `src/stores/editor.ts` holds the current image and
-operations; the Vue components under `src/components` are the UI on top.
+their own. Types are in `src/shared/models` (`edit-operation.ts`, `edit-document.ts`),
+the functions are in `src/shared/helpers` (`operations.ts`, `canvas-renderer.ts`,
+`css-filter.ts`, `document.ts`, `document-validation.ts`, `sha256.ts`, `download.ts`,
+`format-bytes.ts`), and fixed values are in `src/shared/constants`
+(`adjustments.ts`, `filters.ts`). The Pinia store in `src/stores/editor.ts` holds
+the current image and operations; the Vue components under `src/components` are
+the UI on top.
 
 ## Rendering
 
 Both the preview and the export run through one `CanvasRenderer`
-(`src/core/render/canvas-renderer.ts`): a 2D canvas with `ctx.filter` for the
+(`src/shared/helpers/canvas-renderer.ts`): a 2D canvas with `ctx.filter` for the
 adjustments and filters, and a `drawImage` sub-rectangle for the crop. Because
 preview and export share that one path, what you see is what you get.
 

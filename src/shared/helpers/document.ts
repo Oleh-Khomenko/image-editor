@@ -1,5 +1,7 @@
+// models
 import type { EditOperation } from '@/shared/models/edit-operation';
 import type { EditDocument, SourceMeta } from '@/shared/models/edit-document';
+// helpers
 import { isEditOperation, isSourceMeta } from '@/shared/helpers/document-validation';
 
 export class DocumentError extends Error {}

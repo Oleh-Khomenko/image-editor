@@ -1,3 +1,4 @@
+// models
 import type { FilterName } from '@/shared/models/edit-operation';
 
 export interface FilterOption {

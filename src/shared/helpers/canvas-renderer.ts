@@ -1,4 +1,6 @@
+// models
 import type { CropOp, EditOperation } from '@/shared/models/edit-operation';
+// helpers
 import { getCrop } from '@/shared/helpers/operations';
 import { toCssFilter } from '@/shared/helpers/css-filter';
 
