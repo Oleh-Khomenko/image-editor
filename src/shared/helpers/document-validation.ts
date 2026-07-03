@@ -8,12 +8,19 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 function isCropOp(v: Record<string, unknown>): boolean {
-  return (
-    isFiniteNumber(v.x) &&
-    isFiniteNumber(v.y) &&
-    isFiniteNumber(v.width) &&
-    isFiniteNumber(v.height)
-  );
+  if (
+    !isFiniteNumber(v.x) ||
+    !isFiniteNumber(v.y) ||
+    !isFiniteNumber(v.width) ||
+    !isFiniteNumber(v.height)
+  ) {
+    return false;
+  }
+  const x = v.x as number;
+  const y = v.y as number;
+  const width = v.width as number;
+  const height = v.height as number;
+  return x >= 0 && y >= 0 && width > 0 && height > 0 && x + width <= 1.0001 && y + height <= 1.0001;
 }
 
 function isAdjustOp(v: Record<string, unknown>): boolean {

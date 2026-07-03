@@ -10,7 +10,8 @@ import {
   removeOperation,
   upsertOperation,
 } from '@/shared/helpers/operations';
-import { parseDocument, serializeDocument } from '@/shared/helpers/document';
+import { DocumentError, parseDocument, serializeDocument } from '@/shared/helpers/document';
+import { CanvasRenderer } from '@/shared/helpers/canvas-renderer';
 import { sha256Hex } from '@/shared/helpers/sha256';
 // models
 import type { Adjustments, CropOp, EditOperation, FilterName } from '@/shared/models/edit-operation';
@@ -50,9 +51,22 @@ export const useEditorStore = defineStore('editor', () => {
 
   // helpers
   function isAdjustOnlyChange(current: EditOperation[], next: EditOperation[]): boolean {
+    const currentAdjustments = getAdjustments(current);
+    const nextAdjustments = getAdjustments(next);
     const adjustChanged =
-      JSON.stringify(getAdjustments(current)) !== JSON.stringify(getAdjustments(next));
-    const sameCrop = JSON.stringify(getCrop(current)) === JSON.stringify(getCrop(next));
+      currentAdjustments.brightness !== nextAdjustments.brightness ||
+      currentAdjustments.contrast !== nextAdjustments.contrast ||
+      currentAdjustments.saturation !== nextAdjustments.saturation;
+    const currentCrop = getCrop(current);
+    const nextCrop = getCrop(next);
+    const sameCrop =
+      (currentCrop === null && nextCrop === null) ||
+      (currentCrop !== null &&
+        nextCrop !== null &&
+        currentCrop.x === nextCrop.x &&
+        currentCrop.y === nextCrop.y &&
+        currentCrop.width === nextCrop.width &&
+        currentCrop.height === nextCrop.height);
     const sameFilter = getFilter(current) === getFilter(next);
     return adjustChanged && sameCrop && sameFilter;
   }
@@ -109,6 +123,27 @@ export const useEditorStore = defineStore('editor', () => {
     viewingOriginal.value = !viewingOriginal.value;
   }
 
+  // called when a slider drag ends so the next drag starts a fresh undo step
+  function endAdjustGesture(): void {
+    lastCommitWasLiveAdjust = false;
+  }
+
+  function startCropEditing(): void {
+    cropEditing.value = true;
+  }
+
+  function stopCropEditing(): void {
+    cropEditing.value = false;
+  }
+
+  function clearError(): void {
+    error.value = null;
+  }
+
+  function setError(message: string): void {
+    error.value = message;
+  }
+
   function undo(): void {
     lastCommitWasLiveAdjust = false;
     if (!canUndo.value) {
@@ -139,6 +174,9 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   async function loadImage(file: File): Promise<void> {
+    if (busy.value) {
+      return;
+    }
     error.value = null;
     lastCommitWasLiveAdjust = false;
     busy.value = true;
@@ -160,6 +198,7 @@ export const useEditorStore = defineStore('editor', () => {
       undoStack.value = [];
       redoStack.value = [];
       viewingOriginal.value = false;
+      cropEditing.value = false;
     } catch {
       error.value = 'Failed to load image';
     } finally {
@@ -168,6 +207,9 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   async function importJson(text: string): Promise<void> {
+    if (busy.value) {
+      return;
+    }
     error.value = null;
     lastCommitWasLiveAdjust = false;
     busy.value = true;
@@ -184,12 +226,22 @@ export const useEditorStore = defineStore('editor', () => {
         error.value = 'Document does not match the loaded image';
         return;
       }
-      operations.value = doc.operations;
+      operations.value = doc.operations.map((op) =>
+        op.type === 'adjust'
+          ? {
+              ...op,
+              brightness: clampAdjustment(op.brightness),
+              contrast: clampAdjustment(op.contrast),
+              saturation: clampAdjustment(op.saturation),
+            }
+          : op,
+      );
       undoStack.value = [];
       redoStack.value = [];
       viewingOriginal.value = false;
-    } catch {
-      error.value = 'Invalid document';
+      cropEditing.value = false;
+    } catch (e) {
+      error.value = e instanceof DocumentError ? e.message : 'Invalid document';
     } finally {
       busy.value = false;
     }
@@ -206,6 +258,26 @@ export const useEditorStore = defineStore('editor', () => {
     return serializeDocument(source.value, operations.value, opts);
   }
 
+  async function exportImageBlob(): Promise<Blob | null> {
+    if (!source.value || !sourceBitmap.value) {
+      return null;
+    }
+    busy.value = true;
+    try {
+      // yield one frame so a busy spinner can paint before the synchronous render blocks the thread
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const canvas = document.createElement('canvas');
+      const blob = await new CanvasRenderer(canvas).toBlob(
+        sourceBitmap.value,
+        operations.value,
+        source.value.mimeType,
+      );
+      return blob;
+    } finally {
+      busy.value = false;
+    }
+  }
+
   return {
     source,
     sourceBitmap,
@@ -213,8 +285,6 @@ export const useEditorStore = defineStore('editor', () => {
     operations,
     viewingOriginal,
     cropEditing,
-    undoStack,
-    redoStack,
     error,
     busy,
     effectiveOperations,
@@ -231,11 +301,17 @@ export const useEditorStore = defineStore('editor', () => {
     resetAdjustments,
     resetAll,
     toggleViewOriginal,
+    endAdjustGesture,
+    startCropEditing,
+    stopCropEditing,
+    clearError,
+    setError,
     undo,
     redo,
     loadImage,
     importJson,
     exportJson,
+    exportImageBlob,
   };
 });
 

@@ -16,6 +16,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 // helpers
 function acceptFile(file: File | undefined): void {
   if (!file || !file.type.startsWith('image/')) {
+    store.setError('Please choose an image file (PNG, JPEG or WebP)');
     return;
   }
   void store.loadImage(file);
@@ -65,6 +66,7 @@ function handleDrop(event: DragEvent): void {
           color="primary"
           block
           prepend-icon="mdi-image-plus"
+          :loading="store.busy"
           @click="openFileDialog"
         >
           Choose image

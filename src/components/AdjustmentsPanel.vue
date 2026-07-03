@@ -53,6 +53,7 @@ function onAdjust(field: Field, value: number): void {
             size="x-small"
             variant="text"
             density="comfortable"
+            :aria-label="`Reset ${field.label}`"
             @click="onAdjust(field.key, 0)"
           />
         </div>
@@ -62,7 +63,9 @@ function onAdjust(field: Field, value: number): void {
           :max="100"
           :step="1"
           hide-details
+          :aria-label="field.label"
           @update:model-value="(value: number) => onAdjust(field.key, value)"
+          @end="store.endAdjustGesture()"
         />
       </div>
       <v-btn

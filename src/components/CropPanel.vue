@@ -17,7 +17,7 @@ const store = useEditorStore();
         block
         prepend-icon="mdi-crop"
         :disabled="!store.hasImage || store.cropEditing"
-        @click="store.cropEditing = true"
+        @click="store.startCropEditing()"
       >
         Crop
       </v-btn>

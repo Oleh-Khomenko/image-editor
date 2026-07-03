@@ -19,7 +19,7 @@ useUnsavedGuard(() => hasImage.value);
 // helpers
 function onSnackbar(value: boolean): void {
   if (!value) {
-    store.error = null;
+    store.clearError();
   }
 }
 </script>

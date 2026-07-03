@@ -18,6 +18,8 @@ defineExpose({ getCanvas: (): HTMLCanvasElement | null => canvasRef.value });
     <canvas
       ref="canvas"
       class="editor-canvas__surface"
+      role="img"
+      aria-label="Edited image preview"
     />
     <slot name="overlay" />
   </div>

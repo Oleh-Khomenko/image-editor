@@ -26,11 +26,11 @@ function getCanvas(): HTMLCanvasElement | null {
 
 function onApply(rect: NormRect): void {
   store.setCrop(rect);
-  store.cropEditing = false;
+  store.stopCropEditing();
 }
 
 function onCancel(): void {
-  store.cropEditing = false;
+  store.stopCropEditing();
 }
 </script>
 

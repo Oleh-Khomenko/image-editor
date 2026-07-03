@@ -1,11 +1,10 @@
 <script setup lang="ts">
 // utils
-import { computed, nextTick, useTemplateRef } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { storeToRefs } from 'pinia';
 // stores
 import useEditorStore from '@/stores/editor';
 // helpers
-import { CanvasRenderer } from '@/shared/helpers/canvas-renderer';
 import { download, downloadText, exportFilename } from '@/shared/helpers/download';
 import { formatBytes } from '@/shared/helpers/format-bytes';
 
@@ -34,21 +33,10 @@ function extFromMime(mime: string): string {
 }
 
 async function onExportImage(): Promise<void> {
+  const blob = await store.exportImageBlob();
   const src = source.value;
-  const bitmap = store.sourceBitmap;
-  if (!src || !bitmap) {
-    return;
-  }
-  store.busy = true;
-  try {
-    // let the busy indicator paint before the synchronous render blocks the thread
-    await nextTick();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const canvas = document.createElement('canvas');
-    const blob = await new CanvasRenderer(canvas).toBlob(bitmap, store.operations, src.mimeType);
+  if (blob && src) {
     download(blob, exportFilename(src.name, '-edited', extFromMime(src.mimeType)));
-  } finally {
-    store.busy = false;
   }
 }
 
@@ -102,6 +90,7 @@ async function onImageChange(event: Event): Promise<void> {
           v-bind="props"
           icon="mdi-undo"
           variant="text"
+          aria-label="Undo"
           :disabled="!canUndo"
           @click="store.undo()"
         />
@@ -116,13 +105,14 @@ async function onImageChange(event: Event): Promise<void> {
           v-bind="props"
           icon="mdi-redo"
           variant="text"
+          aria-label="Redo"
           :disabled="!canRedo"
           @click="store.redo()"
         />
       </template>
     </v-tooltip>
     <v-tooltip
-      text="Hold to compare with the original"
+      text="Toggle original / edited"
       location="bottom"
     >
       <template #activator="{ props }">
@@ -130,6 +120,8 @@ async function onImageChange(event: Event): Promise<void> {
           v-bind="props"
           icon="mdi-eye-outline"
           variant="text"
+          aria-label="Toggle original / edited"
+          :aria-pressed="viewingOriginal"
           :color="viewingOriginal ? 'primary' : undefined"
           @click="store.toggleViewOriginal()"
         />
@@ -144,6 +136,7 @@ async function onImageChange(event: Event): Promise<void> {
           v-bind="props"
           icon="mdi-restore"
           variant="text"
+          aria-label="Reset all edits"
           @click="store.resetAll()"
         />
       </template>
@@ -170,12 +163,14 @@ async function onImageChange(event: Event): Promise<void> {
           v-bind="props"
           icon="mdi-dots-vertical"
           variant="text"
+          aria-label="More actions"
         />
       </template>
       <v-list density="compact">
         <v-list-item
           title="New image"
           prepend-icon="mdi-image-plus"
+          :disabled="store.busy || store.cropEditing"
           @click="imageInputRef?.click()"
         />
         <v-divider />
@@ -192,6 +187,7 @@ async function onImageChange(event: Event): Promise<void> {
         <v-list-item
           title="Import edits (JSON)"
           prepend-icon="mdi-import"
+          :disabled="store.busy || store.cropEditing"
           @click="jsonInputRef?.click()"
         />
       </v-list>
