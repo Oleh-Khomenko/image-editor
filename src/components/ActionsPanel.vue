@@ -16,16 +16,8 @@ const fileInputRef = useTemplateRef<HTMLInputElement>('fileInput');
 
 // mime types the renderer can produce; anything else falls back to png
 function extFromMime(mime: string): string {
-  if (mime === 'image/jpeg') {
-    return 'jpg';
-  }
-  if (mime === 'image/webp') {
-    return 'webp';
-  }
-  if (mime === 'image/png') {
-    return 'png';
-  }
-  return 'png';
+  const exts: Record<string, string> = { 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+  return exts[mime] ?? 'png';
 }
 
 // handlers

@@ -21,7 +21,6 @@ function onSelect(value: FilterName | null): void {
     </v-card-title>
     <v-card-text>
       <v-select
-        label="Filter"
         :items="FILTER_OPTIONS"
         item-title="title"
         item-value="value"

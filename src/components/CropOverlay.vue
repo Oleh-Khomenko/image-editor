@@ -68,16 +68,18 @@ function pct(value: number): string {
   return `${value * 100}%`;
 }
 
+// handles live inside the frame, so their offsets are frame-local (0..1),
+// independent of the draft rect's size or the image aspect ratio
 function handleStyle(handle: HandleId): Record<string, string> {
   const positions: Record<HandleId, { x: number; y: number }> = {
-    nw: { x: draft.value.x, y: draft.value.y },
-    n: { x: draft.value.x + draft.value.width / 2, y: draft.value.y },
-    ne: { x: draft.value.x + draft.value.width, y: draft.value.y },
-    e: { x: draft.value.x + draft.value.width, y: draft.value.y + draft.value.height / 2 },
-    se: { x: draft.value.x + draft.value.width, y: draft.value.y + draft.value.height },
-    s: { x: draft.value.x + draft.value.width / 2, y: draft.value.y + draft.value.height },
-    sw: { x: draft.value.x, y: draft.value.y + draft.value.height },
-    w: { x: draft.value.x, y: draft.value.y + draft.value.height / 2 },
+    nw: { x: 0, y: 0 },
+    n: { x: 0.5, y: 0 },
+    ne: { x: 1, y: 0 },
+    e: { x: 1, y: 0.5 },
+    se: { x: 1, y: 1 },
+    s: { x: 0.5, y: 1 },
+    sw: { x: 0, y: 1 },
+    w: { x: 0, y: 0.5 },
   };
   const { x, y } = positions[handle];
   return { left: pct(x), top: pct(y) };

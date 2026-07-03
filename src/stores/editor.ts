@@ -20,14 +20,25 @@ export const useEditorStore = defineStore('editor', () => {
   const originalBlob = ref<Blob | null>(null);
   const operations = ref<EditOperation[]>([]);
   const viewingOriginal = ref(false);
+  const cropEditing = ref(false);
   const undoStack = ref<EditOperation[][]>([]);
   const redoStack = ref<EditOperation[][]>([]);
   const error = ref<string | null>(null);
 
+  // tracks whether the last commit was a continuous slider tick, so consecutive
+  // setAdjustment ticks coalesce into a single undo step instead of one per tick
+  let lastCommitWasLiveAdjust = false;
+
   // computed
-  const effectiveOperations = computed<EditOperation[]>(() =>
-    viewingOriginal.value ? [] : operations.value,
-  );
+  const effectiveOperations = computed<EditOperation[]>(() => {
+    if (viewingOriginal.value) {
+      return [];
+    }
+    if (cropEditing.value) {
+      return removeOperation(operations.value, 'crop');
+    }
+    return operations.value;
+  });
   const adjustments = computed<Adjustments>(() => getAdjustments(operations.value));
   const filter = computed<FilterName | null>(() => getFilter(operations.value));
   const crop = computed<CropOp | null>(() => getCrop(operations.value));
@@ -37,11 +48,25 @@ export const useEditorStore = defineStore('editor', () => {
 
   // helpers
 
+  function isAdjustOnlyChange(current: EditOperation[], next: EditOperation[]): boolean {
+    const adjustChanged =
+      JSON.stringify(getAdjustments(current)) !== JSON.stringify(getAdjustments(next));
+    const sameCrop = JSON.stringify(getCrop(current)) === JSON.stringify(getCrop(next));
+    const sameFilter = getFilter(current) === getFilter(next);
+    return adjustChanged && sameCrop && sameFilter;
+  }
+
   // every mutation goes through commit so undo/redo stay consistent
-  function commit(next: EditOperation[]): void {
-    undoStack.value.push([...operations.value]);
+  function commit(next: EditOperation[], liveAdjust = false): void {
+    const current = operations.value;
+    const canCoalesce =
+      liveAdjust && lastCommitWasLiveAdjust && isAdjustOnlyChange(current, next);
+    if (!canCoalesce) {
+      undoStack.value.push([...current]);
+    }
     redoStack.value = [];
     operations.value = next;
+    lastCommitWasLiveAdjust = liveAdjust;
   }
 
   function setAdjustment(partial: Partial<Adjustments>): void {
@@ -51,7 +76,7 @@ export const useEditorStore = defineStore('editor', () => {
       contrast: clampAdjustment(partial.contrast ?? current.contrast),
       saturation: clampAdjustment(partial.saturation ?? current.saturation),
     };
-    commit(upsertOperation(operations.value, { type: 'adjust', ...merged }));
+    commit(upsertOperation(operations.value, { type: 'adjust', ...merged }), true);
   }
 
   function setFilter(name: FilterName | null): void {
@@ -85,6 +110,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // undo/redo move snapshots between stacks directly, bypassing commit
   function undo(): void {
+    lastCommitWasLiveAdjust = false;
     if (!canUndo.value) {
       return;
     }
@@ -93,6 +119,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function redo(): void {
+    lastCommitWasLiveAdjust = false;
     if (!canRedo.value) {
       return;
     }
@@ -114,10 +141,12 @@ export const useEditorStore = defineStore('editor', () => {
 
   async function loadImage(file: File): Promise<void> {
     error.value = null;
+    lastCommitWasLiveAdjust = false;
     try {
       const buf = await file.arrayBuffer();
       const hash = await sha256Hex(buf);
       const bitmap = await createImageBitmap(file);
+      sourceBitmap.value?.close();
       sourceBitmap.value = bitmap;
       originalBlob.value = file;
       source.value = {
@@ -138,11 +167,13 @@ export const useEditorStore = defineStore('editor', () => {
 
   async function importJson(text: string): Promise<void> {
     error.value = null;
+    lastCommitWasLiveAdjust = false;
     try {
       const doc = parseDocument(text);
       if (doc.embedded) {
         const blob = await (await fetch(doc.embedded)).blob();
         const bitmap = await createImageBitmap(blob);
+        sourceBitmap.value?.close();
         sourceBitmap.value = bitmap;
         originalBlob.value = blob;
         source.value = doc.source;
@@ -176,6 +207,7 @@ export const useEditorStore = defineStore('editor', () => {
     originalBlob,
     operations,
     viewingOriginal,
+    cropEditing,
     undoStack,
     redoStack,
     error,

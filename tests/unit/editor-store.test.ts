@@ -54,4 +54,58 @@ describe('editor store', () => {
     store.clearCrop();
     expect(store.crop).toBeNull();
   });
+
+  it('coalesces a slider drag into a single undo step', () => {
+    const store = useEditorStore();
+    store.setAdjustment({ brightness: 10 });
+    store.setAdjustment({ brightness: 20 });
+    store.setAdjustment({ brightness: 30 });
+
+    expect(store.canUndo).toBe(true);
+
+    store.undo();
+    expect(store.adjustments.brightness).toBe(0);
+  });
+
+  it('keeps a filter change and an adjustment as separate undo steps', () => {
+    const store = useEditorStore();
+    store.setFilter('sepia');
+    store.setAdjustment({ brightness: 10 });
+
+    store.undo();
+    expect(store.adjustments.brightness).toBe(0);
+    expect(store.filter).toBe('sepia');
+
+    store.undo();
+    expect(store.filter).toBeNull();
+  });
+
+  it('keeps resetAdjustments after a drag as its own undo step', () => {
+    const store = useEditorStore();
+    store.setCrop({ x: 0, y: 0, width: 0.5, height: 0.5 });
+    store.setAdjustment({ brightness: 10 });
+    store.setAdjustment({ brightness: 20 });
+    store.setAdjustment({ brightness: 30 });
+    store.resetAdjustments();
+
+    expect(store.adjustments.brightness).toBe(0);
+
+    store.undo();
+    expect(store.adjustments.brightness).toBe(30);
+
+    store.undo();
+    expect(store.adjustments.brightness).toBe(0);
+  });
+
+  it('edits crop against the uncropped image without touching history', () => {
+    const store = useEditorStore();
+    store.setAdjustment({ brightness: 10 });
+    store.setCrop({ x: 0, y: 0, width: 0.5, height: 0.5 });
+
+    store.cropEditing = true;
+
+    expect(store.effectiveOperations.some((op) => op.type === 'crop')).toBe(false);
+    expect(store.effectiveOperations.some((op) => op.type === 'adjust')).toBe(true);
+    expect(store.operations.some((op) => op.type === 'crop')).toBe(true);
+  });
 });

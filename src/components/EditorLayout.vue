@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue';
+import { useTemplateRef } from 'vue';
 import ActionsPanel from '@/components/ActionsPanel.vue';
 import AdjustmentsPanel from '@/components/AdjustmentsPanel.vue';
 import CropOverlay from '@/components/CropOverlay.vue';
@@ -14,12 +14,6 @@ const store = useEditorStore();
 // template refs
 const editorCanvasRef = useTemplateRef<InstanceType<typeof EditorCanvas>>('editorCanvas');
 
-// state
-
-// starts false so uploading an image never drops the user straight into
-// crop mode; it only opens when the Crop button is pressed
-const cropEditing = ref(false);
-
 // helpers
 
 function getCanvas(): HTMLCanvasElement | null {
@@ -28,11 +22,11 @@ function getCanvas(): HTMLCanvasElement | null {
 
 function onApply(rect: NormRect): void {
   store.setCrop(rect);
-  cropEditing.value = false;
+  store.cropEditing = false;
 }
 
 function onCancel(): void {
-  cropEditing.value = false;
+  store.cropEditing = false;
 }
 </script>
 
@@ -42,7 +36,7 @@ function onCancel(): void {
       <EditorCanvas ref="editorCanvas">
         <template #overlay>
           <CropOverlay
-            v-if="cropEditing"
+            v-if="store.cropEditing"
             :get-canvas="getCanvas"
             @apply="onApply"
             @cancel="onCancel"
@@ -61,8 +55,8 @@ function onCancel(): void {
           <v-btn
             variant="tonal"
             block
-            :disabled="!store.hasImage || cropEditing"
-            @click="cropEditing = true"
+            :disabled="!store.hasImage || store.cropEditing"
+            @click="store.cropEditing = true"
           >
             Crop
           </v-btn>
